@@ -23,6 +23,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 def pick_device():
     """Retourne "cuda", "mps" ou "cpu" """
+    if torch.cuda.is_available():
+        return "cuda"
+    elif "mps" in sys.modules:
+        return "mps"
+    else:
+        return "cpu"
 
 # Adapté de la démo 2 (04_llm_and_rag.ipynb, cellule « Vérification »).                                                                                                                                                                                                                                                         │
 def check_env():
@@ -34,11 +40,11 @@ def check_env():
 
 # Adapté de la démo 2 (04_llm_and_rag.ipynb, cellule « Charger Qwen »).
 def load_qwen(device=None, model_id="Qwen/Qwen3-4B-Instruct-2507"):
+    if device == None:
+        device = pick_device()
+
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model_options = {"dtype": torch.float32 if device == "cpu" else torch.float16}
-    if device == None:
-        model = pick_device()
-
     if device == "cuda":
         model_options["device_map"] = "auto"
 
@@ -62,3 +68,6 @@ def generate(gen_pipe, tokenizer,do_sample, messages, max_new_tokens=512):
 
 def free_qwen():
     """Fonction qui permet de mettre qwen en pause pour libérer du compute power."""
+
+def build_messages(prompt,context,system="You are a helpful assistant."):
+    
