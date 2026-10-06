@@ -56,6 +56,9 @@ def ask_qwen(gen_pipe, tokenizer,prompt, system="You are a helpful assistant.", 
     return gen_pipe(text, max_new_tokens=max_new_tokens, do_sample=False,
                         return_full_text=False, pad_token_id=tokenizer.eos_token_id)[0]["generated_text"].strip()
 
-def generate(gen_pipe, tokenizer, messages, max_new_tokens=512, do_sample):
+def generate(gen_pipe, tokenizer,do_sample, messages, max_new_tokens=512):
     """Recoit une liste de messages déjà construite. Retourne {"text","n_token_in", "n_token_out", "duration_s"} """
     prompt = messages[0]["content"]
+
+def free_qwen():
+    """Fonction qui permet de mettre qwen en pause pour libérer du compute power."""
