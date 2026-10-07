@@ -30,17 +30,24 @@ def main():
             # Éviter de lancer le modèle sans prompt par erreur
             if prompt in {"quit","exit"}:
                 break
-            elif prompt == None:
+            if prompt is None:
                 continue
-            system = ""
-            context = ""
-            messages = build_messages(gen_pipe,model,tokenizer,prompt)
-            result = generate(gen_pipe,model,tokenizer,prompt,messages)
-            print(result["text"])
-            log_call(log_path,result["text"],result["user"])
+            system = ask_user("Instructions : ")
+            context = ask_user("Contexte : ")
+            messages = build_messages(prompt,context,system)
+            result = generate(gen_pipe,tokenizer,messages)
+            print(f"Réponse: {result['text']} \n"
+                  f"Token entrant : {result['token_in']} \n"
+                  f"Token généré : {result['token_out']} \n"
+                  f"Durée : {result['duration_s']} \n"
+                  )
+            log_call(log_path,result["text"],result)
 
     except (KeyboardInterrupt,EOFError):
-        gen_pipe = model = none
+        print("Arrêt demandé")
+    # Ici, on arrête le qwen et on libère la mémoire
+    finally:
+        gen_pipe = model = tokenizer = None # Ca c'est pour pouvoir supprimer l'objet qwen. On le vide
         free_qwen(gen_pipe,model,tokenizer)
         print(f"Conversation recorded. Log path: {log_path}")
 
