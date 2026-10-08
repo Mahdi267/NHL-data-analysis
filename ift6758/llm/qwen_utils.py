@@ -1,22 +1,22 @@
 """
-Chargement de Qwen3-4B-Instruct-2507 et fonction d'appel simple.                                                                                                                                                                                                                                                                  │tutoriels/test.ipynb
-                                                                                                                                                                                                                                                                                                                                     │
-Code adapté de la démo 2 du cours IFT 6758 (cellule « Charger Qwen ») :                                                                                                                                                                                                                                                              │────────────────────────────────────────────────────────────────────────────────────────
-    demo_2/notebooks/fr/07_llm_and_rag_FP16.ipynb                                                                                                                                                                                                                                                                                    │tutoriels/Conversation_IA.md (untracked)
-    Dépôt : https://github.com/milarobotlearningcourse/data_science                                                                                                                                                                                                                                                                  │────────────────────────────────────────────────────────────────────────────────────────
-    Version consultée : commit eb3dce5 (2026-09-29)                                                                                                                                                                                                                                                                                  │New file not yet staged.
-                                                                                                                                                                                                                                                                                                                                     │Run `git add :/tutoriels/Conversation_IA.md` to see line counts.
-Modifications : chargement déplacé dans load_qwen() pour ne pas charger                                                                                                                                                                                                                                                              │
-le modèle à l'import ; gen_pipe et tokenizer passés en paramètres à ask_qwen().                                                                                                                                                                                                                                                      │────────────────────────────────────────────────────────────────────────────────────────
-"""
+Ensemble de fonctions d'appel simple pour gérer le modèle. Configuré pour Qwen3-4B-Instruct-2507.
 
+Code en partie dérivé de la démo 2 du cours IFT 6758.
+
+METTRE UNE LISTE DE REFERENCE DE LA DEMO 2
+
+"""
 import sys
 
-from sympy.polys.benchmarks.bench_solvers import time_eqs_10x8
+import prompt_toolkit
+
+from ift6758.llm.qwen_utils_2 import DEFAULT_SYSTEM
 
 if sys.version_info[:2] != (3, 11):
     raise RuntimeError("Use a Python 3.11 kernel: the course .venv locally, or a compatible Colab runtime.")
 
+import time
+import gc
 import numpy as np
 import pandas as pd
 import torch
@@ -27,7 +27,7 @@ def pick_device():
     """Retourne "cuda", "mps" ou "cpu" """
     if torch.cuda.is_available():
         return "cuda"
-    elif "mps" in sys.modules:
+    elif torch.backends.mps.is_available():
         return "mps"
     else:
         return "cpu"
@@ -89,7 +89,6 @@ def free_qwen(device):
 
 def build_messages(prompt,context,system="You are a helpful assistant."):
     """Construire message système et message user et ajouter context s'il y a lieu"""
-    # if context add context to prompt
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": prompt},
