@@ -10,10 +10,14 @@ Source 3: https://huggingface.co/learn/cookbook/advanced_rag, Hugging face docum
 
 
 """
+
 # Code tiré de la démo 2
 import sys
+
 if sys.version_info[:2] != (3, 11):
-    raise RuntimeError("Use a Python 3.11 kernel: the course .venv locally, or a compatible Colab runtime.")
+    raise RuntimeError(
+        "Use a Python 3.11 kernel: the course .venv locally, or a compatible Colab runtime."
+    )
 import time
 import gc
 import numpy as np
@@ -26,9 +30,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
 DEFAULT_SYSTEM = "You are a helpful assistant."
 
+
 def pick_device():
     """Fonction qui retourne le compute unit en fonction de la configuration du système
-    
+
     :return: Compute unit
     """
     # Ligne 33 à 38 adapté de source 1
@@ -38,6 +43,7 @@ def pick_device():
         return "mps"
     else:
         return "cpu"
+
 
 def check_env():
     """Fonction qui permet d'aficher la configuration du système utilisé.
@@ -55,10 +61,12 @@ def check_env():
         if torch.cuda.is_available()
         else "Unavailable — CPU/Apple GPU fallback",
     )
+
+
 # Code adapté de source 1 et 2.
 # Ligne 71,
-def load_qwen(model_id = MODEL_ID, device = None):
-    """ Fonction qui charge le modèle et qui retourne
+def load_qwen(model_id=MODEL_ID, device=None):
+    """Fonction qui charge le modèle et qui retourne
 
     :param model_id: Adresse du modèle (Voir hugging Face)
     :type model_id: str
@@ -73,14 +81,17 @@ def load_qwen(model_id = MODEL_ID, device = None):
     model_options = {"dtype": torch.float32 if device == "cpu" else torch.float16}
     if device == "cuda":
         model_options["device_map"] = "auto"
-    model = AutoModelForCausalLM.from_pretrained(model_id,**model_options) # On ajoute l'option pour la compatibilité
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id, **model_options
+    )  # On ajoute l'option pour la compatibilité
     # Si le modèle est sur cuda, le modèle est déjà placé, sinon on dépalce
     if device != "cuda":
         model = model.to(device)
     # Ici je coupe le code de la démo 2 car MORE DATA Baby. Je veux connaitre le nombre exact de token dans le log.
     return model, tokenizer, device
 
-def build_messages(prompt, context=None, system = None):
+
+def build_messages(prompt, context=None, system=None):
     system = system or DEFAULT_SYSTEM  # Si système vide, utilise default
     # https://huggingface.co/learn/cookbook/advanced_rag pour les instructions et structure
     question = (
@@ -97,7 +108,8 @@ def build_messages(prompt, context=None, system = None):
     ]
     return messages
 
-def generate(model,tokenizer,messages,max_new_tokens=512, do_sample=False):
+
+def generate(model, tokenizer, messages, max_new_tokens=512, do_sample=False):
     """
 
     :param model:
@@ -108,18 +120,36 @@ def generate(model,tokenizer,messages,max_new_tokens=512, do_sample=False):
     :return:
     """
     # https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
-    prompt_text = tokenizer.apply_chat_template(messages,tokenize=False,add_generation_prompt=True)
-    model_inputs = tokenizer([prompt_text],return_tensors="pt").to(model.device)
+    prompt_text = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
+    )
+    model_inputs = tokenizer([prompt_text], return_tensors="pt").to(model.device)
 
-    n_token_in = model_inputs["input_ids"].shape[1] # On compte les token en entrée (format input_id = (1,n))
-    t0 = time.perf_counter() # Timer pour la durée de cogitation du modèle
+    n_token_in = model_inputs["input_ids"].shape[
+        1
+    ]  # On compte les token en entrée (format input_id = (1,n))
+    t0 = time.perf_counter()  # Timer pour la durée de cogitation du modèle
     # Démo et https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
-    generated = model.generate(**model_inputs,max_new_tokens=max_new_tokens,do_sample=do_sample,pad_token_id =tokenizer.eos_token_id)# Generated (1,n_token_in+n_token_out)
-    out = generated[0][n_token_in:] # uut a le format (n_token_out,)
-    duration_s = time.perf_counter()-t0
+    generated = model.generate(
+        **model_inputs,
+        max_new_tokens=max_new_tokens,
+        do_sample=do_sample,
+        pad_token_id=tokenizer.eos_token_id,
+    )  # Generated (1,n_token_in+n_token_out)
+    out = generated[0][n_token_in:]  # uut a le format (n_token_out,)
+    duration_s = time.perf_counter() - t0
     n_token_out = len(out)
-    content = tokenizer.decode(out,skip_special_tokens=True).strip()
-    return {"prompt":prompt_text, "answer":content, "n_token_in":n_token_in, "n_token_out":n_token_out, "duration_s":duration_s, "max_new_tokens":max_new_tokens,"do_sample":do_sample}
+    content = tokenizer.decode(out, skip_special_tokens=True).strip()
+    return {
+        "prompt": prompt_text,
+        "answer": content,
+        "n_token_in": n_token_in,
+        "n_token_out": n_token_out,
+        "duration_s": duration_s,
+        "max_new_tokens": max_new_tokens,
+        "do_sample": do_sample,
+    }
+
 
 def free_qwen(device):
     """Fonction qui vide le cache du bon device. Doit suivre un delete du model et du tokenizer sinon la mémoire ne
@@ -131,4 +161,6 @@ def free_qwen(device):
     :return: None
     """
     gc.collect()
-    torch.cuda.empty_cache() if device == "cuda" else (torch.mps.empty_cache() if device == "mps" else None)
+    torch.cuda.empty_cache() if device == "cuda" else (
+        torch.mps.empty_cache() if device == "mps" else None
+    )
