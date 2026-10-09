@@ -38,9 +38,9 @@ def extract_section(text,start,end):
     :rtype: str
     """
     if start not in text:
-       raise ValueError(f"\nTitre première section incorrect ou manquant dans la documentation")
+       raise ValueError(f"Titre introuvable: ",{start})
     if end not in text:
-        raise ValueError(f"\nTitre deuxième section incorrect ou manquant dans la documentation")
+        raise ValueError(f"Titre introuvable: ",{end})
     text = text.split(start,1)[1] # On coupe texte à start, 1 seule coupure, on garde section 2
     text = text.split(end,1)[0] # On coupe section 2 à end, on garde Section 2.1
     return text
