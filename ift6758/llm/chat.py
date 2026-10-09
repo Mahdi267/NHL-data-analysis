@@ -35,19 +35,19 @@ def main():
             system = ask_user("Instructions : ")
             context = ask_user("Contexte : ")
             messages = build_messages(prompt,context,system)
-            result = generate(gen_pipe,tokenizer,messages)
-            print(f"Réponse: {result['text']} \n"
-                  f"Token entrant : {result['token_in']} \n"
-                  f"Token généré : {result['token_out']} \n"
+            result = generate(model,tokenizer,messages)
+            print(f"Réponse: {result['answer']} \n"
+                  f"Token entrant : {result['n_token_in']} \n"
+                  f"Token généré : {result['n_token_out']} \n"
                   f"Durée : {result['duration_s']} \n"
                   )
-            log_call(log_path,result["text"],result)
+            log_call(log_path,messages,result)
 
     except (KeyboardInterrupt,EOFError):
         print("Arrêt demandé")
     # Ici, on arrête le qwen et on libère la mémoire
     finally:
-        gen_pipe = model = tokenizer = None # Ca c'est pour pouvoir supprimer l'objet qwen. On le vide
+        model = tokenizer = None # Ca c'est pour pouvoir supprimer l'objet qwen. On le vide
         free_qwen(gen_pipe,model,tokenizer)
         print(f"Conversation recorded. Log path: {log_path}")
 
