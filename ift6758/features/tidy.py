@@ -282,4 +282,4 @@ def json2tidy(raw_data: str | dict) -> pd.DataFrame:
     return df_merged_name_play
     
 if __name__ == "__main__":
-    print(json2tidy("../data/test_data.json"))
+    print(json2tidy("ift6758/notebooks/data/raw/2022/2022020001.json")["strength"])

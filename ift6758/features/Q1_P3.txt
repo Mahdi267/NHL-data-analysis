@@ -1,0 +1,7 @@
+En réalité, le nombre précis de joueurs sur la glace est déjà décrit dans situationCode. Le premier et le dernier chiffre 
+désignent les gardiens (1 si le gardien est dans le filet, 0 s’il a été retiré), et les deux chiffres du milieu donnent le 
+nombre de patineurs de chaque équipe, d’abord le visiteur puis le domicile. Par exemple, 1451 veut dire 4 patineurs 
+visiteurs contre 5 patineurs à domicile. Comme ce champ est aussi présent pour les tirs et pas seulement pour les buts, on
+pourrait simplement le décoder pour chaque tir et chaque but. Ensuite, on le compare à eventOwnerTeamId pour exprimer la 
+force du point de vue de l’équipe qui tire, par exemple 5 contre 4 si elle est en avantage numérique, ou 4 contre 5 si 
+elle est en désavantage.
