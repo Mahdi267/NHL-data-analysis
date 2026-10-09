@@ -4,25 +4,19 @@ import requests
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 import numpy
-
-def get_from_url(url):
-    """Fonction qui est responsable d'aller extraire le texte depuis l'URL et de le convertir en fichier.md """
-
-def chunks_gen(doc):
-    """Fonction qui est responsable de lire le document et de transformer le texte en embeddings. Si le doc n'existe pas encore, on appel get_from_url()."""
-
-def encode_text(text,rag):
-    """Fonction qui encode les prompts de la même manière que le RAG, compare le résultat au RAG et extrait les vecteur RAG les plus similaires"""
+DOCS_DIR = "ift6758/data/docs"
 
 def load_doc(url,path):
     """Retourne le teste de la doc et la met en cache sur le disque
 
-    :param url:
-    :param path:
+    :param url: Website url
+    :type url: str
+    :param path: /name_file.md
+    :type path: str
     :return:
     """
     # Ligne tiré de demo 2
-    path = Path(path)
+    path = Path(DOCS_DIR+path)
     if not path.exists():
         response = requests.get(url, timeout=30)
         response.raise_for_status()
@@ -30,12 +24,30 @@ def load_doc(url,path):
         path.write_text(response.text, encoding="utf-8")
     text = path.read_text(encoding="utf-8")
     return text
-
+# Code adapté de démo 2
+def extract_section(text,start,end):
+    """Retourne le texte compris entre start et end
+    
+    :param text: Document complet provenant de load_doc
+    :type text: str
+    :param start: Titre ou la documentation commence
+    :type start: str
+    :param end: Titre ou la documentation termine
+    :type end: str
+    :return: Le texte entre les deux titres
+    :rtype: str
+    """
+    if start not in text:
+       raise ValueError(f"\nTitre première section incorrect ou manquant dans la documentation")
+    if end not in text:
+        raise ValueError(f"\nTitre deuxième section incorrect ou manquant dans la documentation")
+    text = text.split(start,1)[1] # On coupe texte à start, 1 seule coupure, on garde section 2
+    text = text.split(end,1)[0] # On coupe section 2 à end, on garde Section 2.1
+    return text
 
 def split_doc(text,chunk_size,chunk_overlap):
     """Retourne la liste des passages"""
 
-# La recommendation de numpy vs FAISS vient de Claude, sans sources cités. Je trouve logique car semble plus rapide.
 def embed(texts,embedder):
     """Retourne une matrice numpy d'embeddings normalisé"""
 
