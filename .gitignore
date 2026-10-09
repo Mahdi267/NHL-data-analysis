@@ -41,6 +41,7 @@ MANIFEST
 *.spec
 
 # Installer logs
+logs/
 pip-log.txt
 pip-delete-this-directory.txt
 
@@ -84,7 +85,7 @@ runs/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-
+test.ipynb
 # IPython
 profile_default/
 ipython_config.py
@@ -141,3 +142,4 @@ dmypy.json
 
 # Ruff
 .ruff_cache/
+/ift6758/notebooks/test.ipynb
