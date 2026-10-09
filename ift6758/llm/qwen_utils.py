@@ -121,7 +121,7 @@ def free_qwen(device):
 
     :param device:
     :type device: str
-    :return:
+    :return: None
     """
     gc.collect()
     torch.cuda.empty_cache() if device == "cuda" else (torch.mps.empty_cache() if device == "mps" else None)

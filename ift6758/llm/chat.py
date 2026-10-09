@@ -19,10 +19,9 @@ def main():
     Loops on prompt with optionnal system and context, then ask qwen and display its answer, then logs
     Ends on quit and exit prompt or Ctrl+C or Ctrl+D and kills qwen
 
-    :param
-    :return None
+    :return: None
     """
-    gen_pipe, model, tokenizer = load_qwen()
+    model, tokenizer, device = load_qwen()
     log_path = create_log()
     try:
         while True:
@@ -48,7 +47,8 @@ def main():
     # Ici, on arrête le qwen et on libère la mémoire
     finally:
         model = tokenizer = None # Ca c'est pour pouvoir supprimer l'objet qwen. On le vide
-        free_qwen(gen_pipe,model,tokenizer)
+        # del model, tokenizer
+        free_qwen(device)
         print(f"Conversation recorded. Log path: {log_path}")
 
 
