@@ -1,11 +1,16 @@
 """
 Ensemble de fonctions d'appel simple pour gérer le modèle. Configuré pour Qwen3-4B-Instruct-2507.
 
-Code en partie dérivé de la démo 2 du cours IFT 6758.
+Code en partie dérivé de la démo 2 du cours IFT 6758 et du site web Hugging Face
+Source 1: milarobotlearningcourse/data_science, demo_2/notebooks/fr/04_llm_and_rag.ipynb, commit eb3dce5 (2026-09-29)
+Source 2: https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507, Qwen3-4B-Instruct-2507 Quickstart
+Source 3: https://huggingface.co/learn/cookbook/advanced_rag, Hugging face documentation
 
-METTRE UNE LISTE DE REFERENCE DE LA DEMO 2
+
+
 
 """
+# Code tiré de la démo 2
 import sys
 if sys.version_info[:2] != (3, 11):
     raise RuntimeError("Use a Python 3.11 kernel: the course .venv locally, or a compatible Colab runtime.")
@@ -26,6 +31,7 @@ def pick_device():
     
     :return: Compute unit
     """
+    # Ligne 33 à 38 adapté de source 1
     if torch.cuda.is_available():
         return "cuda"
     elif torch.backends.mps.is_available():
@@ -33,12 +39,12 @@ def pick_device():
     else:
         return "cpu"
 
-# Code adapté de la démo 2 (04_llm_and_rag.ipynb, cellule « Vérification »).
 def check_env():
     """Fonction qui permet d'aficher la configuration du système utilisé.
 
     :return: None
     """
+    # Ligne 46 à 55 tiré de source 1
     print("Python:", sys.version.split()[0])
     print("NumPy:", np.__version__, "| pandas:", pd.__version__)
     print("Transformers:", version("transformers"))
@@ -49,7 +55,8 @@ def check_env():
         if torch.cuda.is_available()
         else "Unavailable — CPU/Apple GPU fallback",
     )
-# Code adapté de la démo 2 (04_llm_and_rag.ipynb, cellule « Charger Qwen »).
+# Code adapté de source 1 et 2.
+# Ligne 71,
 def load_qwen(model_id = MODEL_ID, device = None):
     """ Fonction qui charge le modèle et qui retourne
 
@@ -112,7 +119,7 @@ def generate(model,tokenizer,messages,max_new_tokens=512, do_sample=False):
     duration_s = time.perf_counter()-t0
     n_token_out = len(out)
     content = tokenizer.decode(out,skip_special_tokens=True).strip()
-    return {"prompt":prompt_text, "answer":content, "n_token_in":n_token_in, "n_token_out":n_token_out, "duration_s":duration_s}
+    return {"prompt":prompt_text, "answer":content, "n_token_in":n_token_in, "n_token_out":n_token_out, "duration_s":duration_s, "max_new_tokens":max_new_tokens,"do_sample":do_sample}
 
 def free_qwen(device):
     """Fonction qui vide le cache du bon device. Doit suivre un delete du model et du tokenizer sinon la mémoire ne

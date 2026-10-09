@@ -13,6 +13,14 @@ def create_log(log_dir="logs"):
     return path
 
 def log_call(log_path,messages,result, extra=None):
+    """Fonction qui enregistre les informations d'une conversation dans un fichier jsonL.
+
+    :param log_path:
+    :param messages:
+    :param result:
+    :param extra:
+    :return: None
+    """
 
     tokens_per_s = (result["n_token_out"]/(result["duration_s"])) if result["duration_s"] > 0 else None
     extra = extra or {}
