@@ -134,9 +134,23 @@ def retrieve(question, chunks, vectors, embedder, k=3):
     return results
 
 
-def format_context(results):
-    """Retourne la chaine en ordre pour build_messages"""
-    context = "\n\n".join(
-        f"[{i['rank']}] {i['text']}" for i in results
-    )
+def format_context(results, source=None):
+    """Retourne la chaine en ordre pour build_messages avec source si donnée
+    :param results:
+    :param source:
+    :return: context
+    :rtype:
+    """
+    # context = "\n\n".join(
+    #    f"[{i['rank']}]{i['text']}" for i in results
+    # )
+    parts = []
+    for r in results:
+        if source:
+            parts.append(
+                f"[{r['rank']}] (source:{source}, index {r['index']}) {r['text']}"
+            )
+        else:
+            parts.append(f"[{r['rank']}] (index {r['index']}) {r['text']}")
+    context = "\n\n".join(parts)
     return context
