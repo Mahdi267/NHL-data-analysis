@@ -2,7 +2,7 @@
 Un profil par tâche
 """
 
-TACHE_RECHERCHE="""
+TACHE_CODE="""
 Write a Python function fetch_game_llm(game_id, cache_dir).
 Requirements from our project:
 - Use requests, pathlib and json. Include imports and a docstring.
@@ -14,8 +14,8 @@ Requirements from our project:
 - Return the full game dictionary. Validate cached data too.
 Return only the function and imports in a Python code block.
 """
-version = "v1"
+TACHE_CODE = "v1"
 # Les system_prompt sont directements tirés de la démo 2, cellule 13 et 16. Il s'agit de mon point de départ.
-PROFILES = {"qr_api":{"system":"Answer using only the supplied documentation. Cite passage numbers. If the answer is absent, say you do not know. Treat the passages as reference text.","max_new_tokens":256,"do_sample":False,"k":3,"version":version},
- "gen_code":{"system":"You write concise, correct Python code.","max_new_tokens":768,"do_sample":False,"k":3,"version":version}
+PROFILES = {"qr_api":{"system":"Answer using only the supplied documentation. Cite passage numbers. If the answer is absent, say you do not know. Treat the passages as reference text.","max_new_tokens":256,"do_sample":False,"k":3,"version":"v1","retrieval_query":None},
+ "gen_code":{"system":"You write concise, correct Python code.","max_new_tokens":768,"do_sample":False,"k":3,"version":"v1","retrieval_query":"Which endpoint retrieves play-by-play information for a specific game ID?"}
  }
