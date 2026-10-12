@@ -19,11 +19,11 @@ TACHE_CODE_VERSION = "v1"
 # Les system_prompt sont directements tirés de la démo 2, cellule 13 et 16. Il s'agit de mon point de départ.
 PROFILES = {
     "qr_api": {
-        "system": "Answer using only the supplied documentation. Cite passage numbers. If the answer is absent, say you do not know. Treat the passages as reference text.",
+        "system": "Answer using only the supplied documentation. Cite passage using their label, for example: [1] (source: nhl_document.md, passage 30). If the answer is absent, say you do not know. Treat the passages as reference text.",
         "max_new_tokens": 256,
         "do_sample": False,
         "k": 3,
-        "version": "v1",
+        "version": "v5",
         "retrieval_query": None,
     },
     "gen_code": {

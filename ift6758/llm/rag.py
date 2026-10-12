@@ -148,7 +148,7 @@ def format_context(results, source=None):
     for r in results:
         if source:
             parts.append(
-                f"[{r['rank']}] (source:{source}, index {r['index']}) {r['text']}"
+                f"[{r['rank']}] (source:{source}, passage {r['index']}) {r['text']}"
             )
         else:
             parts.append(f"[{r['rank']}] (index {r['index']}) {r['text']}")
