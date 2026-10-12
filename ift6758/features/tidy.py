@@ -72,7 +72,7 @@ def json2tidy(raw_data: str | dict) -> pd.DataFrame:
         data = raw_data
 
     # Normalize the json data
-    df_data = pd.json_normalize(data, "plays", ["id", "season"])
+    df_data = pd.json_normalize(data, "plays", ["id", "season", ["homeTeam", "id"]])
 
     # Filter the goal and shot-on-goal only
     df_goals_shots = df_data[
@@ -103,7 +103,9 @@ def json2tidy(raw_data: str | dict) -> pd.DataFrame:
         "details.yCoord",
         "details.goalieInNetId",
         "details.shotType",
-        "details.eventOwnerTeamId"
+        "details.eventOwnerTeamId",
+        "homeTeam.id",
+        "homeTeamDefendingSide"
     ]
 
     # Select only wanted information
@@ -258,6 +260,7 @@ def json2tidy(raw_data: str | dict) -> pd.DataFrame:
     # Rename columns to make the dataframe easier to read
     df_merged_name_play = df_merged_name_play.rename(columns={
         "id": "game_id",
+        "homeTeam.id": "homeTeam_id",
         "eventId": "event_id",
         "season": "season",
         "situationCode": "situation_code",
@@ -282,4 +285,4 @@ def json2tidy(raw_data: str | dict) -> pd.DataFrame:
     return df_merged_name_play
     
 if __name__ == "__main__":
-    print(json2tidy("../data/test_data.json"))
+    print(json2tidy("ift6758/notebooks/data/raw/2022/2022020001.json")["strength"])
