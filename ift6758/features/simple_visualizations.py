@@ -4,20 +4,6 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-def get_games_ids(season):
-    """
-    Function returning a list of all the game ids for a season
-
-    Parameters:
-        Season (int) : Season to take the games from
-
-    Returns:
-        pd.DataFrame
-    """
-    pathlist = Path(f"../notebooks/data/raw/{season}")
-    return [p.stem for p in pathlist.glob("*.json")]
-
-
 def games_list(season) -> pd.DataFrame:
     """
     Function to put all the games dataframe for a season in a list and merge them into one dataframe.
@@ -28,7 +14,8 @@ def games_list(season) -> pd.DataFrame:
     Returns:
         pd.DataFrame
     """
-    games_ids = get_games_ids(season)
+    pathlist = Path(f"../notebooks/data/raw/{season}")
+    games_ids = [p.stem for p in pathlist.glob("*.json")]
 
     df_games_list = []
 
