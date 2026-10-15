@@ -136,7 +136,7 @@ def run_tests(fetch_fn, game_id, game):
         except AssertionError as e:  # If test function failed. Before Exception because assertion is exception
             results[name] = f"ÉCHEC : {e}"
         except Exception as e:  # Recommended by Claude, allows error identification other than my Assert
-            result[name] = (
+            results[name] = (
                 f"ERREUR : {type(e).__name__}: {e}"  # Prints the Exception type
             )
     return results
