@@ -78,7 +78,7 @@ def check_failed_request(fetch_fn, game_id):
         )
 def check_wrong_cache(fetch_fn, game_id, game):
     """Test 4 (BONUS): la match en cache est le mauvais, donc une erreur est levée.
-    Code suggéré par la cellule 23 de demo_2/notebooks/fr/04_llm_and_rag.ipynb.
+    Cas suggéré par la cellule 23 de demo_2/notebooks/fr/04_llm_and_rag.ipynb.
 
     :param fetch_fn:
     :param game_id:
@@ -94,14 +94,14 @@ def check_wrong_cache(fetch_fn, game_id, game):
         with patch("requests.get", side_effect=AssertionError("Request sent without name error flag")) as get:
             # On essaie la fonction
             try:
-                fetch_fn(game_id, folder)
+                fetch_fn(other_id, folder)
             # On pass si ca agit comme attendu
             except ValueError: # A valider avec le code de William
                 pass
             # Sinon on avertie que problème
             else:
                 raise AssertionError("Wrong cached match accepted without error flag")
-        get.assert_called_once()
+        get.assert_not_called()
     
 def run_tests(fetch_fn, game_id, game):
     """ Run all 4 tests on fecth_fn and return results for each test. lambda idea comes from Claude
