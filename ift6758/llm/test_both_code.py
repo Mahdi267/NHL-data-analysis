@@ -1,5 +1,6 @@
 import json
 from tempfile import TemporaryDirectory
+from unittest import result
 from unittest.mock import Mock, patch
 from pathlib import Path
 
@@ -103,11 +104,14 @@ def check_wrong_cache(fetch_fn, game_id, game):
         get.assert_called_once()
     
 def run_tests(fetch_fn, game_id, game):
-    """
+    """ Run all 4 tests on fecth_fn and return resukts for each test.
 
     :param fetch_fn:
     :param game_id:
     :param game:
     :return:
     """
-    pass
+    check_download(fetch_fn, game_id, game)
+    check_cache_no_request(fetch_fn, game_id, game)
+    check_failed_request(fetch_fn, game_id)
+    check_wrong_cache(fetch_fn, game_id, game)
