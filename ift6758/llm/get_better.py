@@ -47,8 +47,8 @@ def format_test_report(result):
     return report
 
 def build_refine_prompt(task, code, context, report):
-    """assembler tous ces éléments en un prompts
-
+    """Assemble la tâche, le code généré, le rapport de tests et la doc RAG
+    en un message pour que Qwen propose un nouveau prompt de tâche.
     :param task:
     :param code:
     :param context:
@@ -56,34 +56,14 @@ def build_refine_prompt(task, code, context, report):
     :return:
     """
     # https://huggingface.co/learn/cookbook/advanced_rag pour les instructions et structure
-    text = f"Here is the original task you received.\n<task>{task}</task>\n"
-    text = (
-        "".join(
-            text +
-            f"Here is the code previously generated.\n<generated_code>{code}</generated_code>\n"
-        )
-        if code
-        else text
-    )
-    text = (
-        "".join(
-            text
-            + f"Here are the results of the tests.\n<test_results>{report}</test_results>\n"
-        )
-        if report
-        else text
-    )
-    text = (
-        "".join(
-            text
-            + f"Rewrite the task prompt so that the code generated from it passes all the tests.\n"
-            + f"Keep every requirement of the original task prompt.\n"
-            + f"Do not write any code. "
-            + f"Return only the new task prompt inside <new_prompt></new_prompt> tags."
-        )
-        if context
-        else text
-    )
-    text = "".join(text + f"<context>{context}</context>") if context else text
-
-    return text
+    parts = [
+        f"Here is the original task prompt.\n<task>{task}</task>",
+        f"Here is the code generated from this task prompt.\n<generated_code>{code}</generated_code>",
+        f"Here are the results of the tests run on this code.\n<test_results>{report}</test_results>",
+        f"Here is the official API documentation.\n<context>{context}</context>",
+        "Rewrite the task prompt so that the code generated from it passes all the tests. "
+        "Keep every requirement of the original task prompt. "
+        "Do not write any code. "
+        "Return only the new task prompt inside <new_prompt></new_prompt> tags."
+    ]
+    return "\n\n".join(parts)

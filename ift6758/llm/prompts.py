@@ -3,7 +3,7 @@ Un profil par tâche
 """
 
 # Prompts directement tirés de la demo 2 du cours.
-TACHE_CODE = """
+OG_TACHE_1 = """
 Write a Python function fetch_game_llm(game_id, cache_dir).
 Requirements from our project:
 - Use requests, pathlib and json. Include imports and a docstring.
@@ -15,7 +15,6 @@ Requirements from our project:
 - Return the full game dictionary. Validate cached data too.
 Return only the function and imports in a Python code block.
 """
-TACHE_CODE_VERSION = "v1"
 # Les system_prompt sont directements tirés de la démo 2, cellule 13 et 16. Il s'agit de mon point de départ.
 PROFILES = {
     "qr_api": {
@@ -33,5 +32,13 @@ PROFILES = {
         "k": 3,
         "version": "v1",
         "retrieval_query": "Which endpoint retrieves play-by-play information for a specific game ID?",
+    },
+    "refine": {
+        "system": "You take existing AI model prompts and make them better adn more efficient using the information available to you. The prompts will be used by a model that generates code. You need to help the model identify mistakes in its previous code to help him achieve the original task. Keep all the original requirements from the previous prompt and add the new one to help the model with its mistakes in the previous code.",
+        "max_new_tokens": 256, # Environ 2 fois plus que le prompt TÂCHE_CODE
+        "do_sample": False,
+        "k": None, # On réutilise contexte original
+        "version": "v1",
+        "retrieval_query": None,
     },
 }
