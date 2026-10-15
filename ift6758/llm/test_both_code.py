@@ -74,7 +74,7 @@ def check_failed_request(fetch_fn, game_id):
                 raise AssertionError("No error even with HTTP flag")
         get.assert_called_once()
         assert not (folder / f"{game_id}.json").exists(), (
-            "Fichier mis en cache malgré l'échec"
+            "File cached even with error"
         )
 def check_wrong_cache(fetch_fn, game_id, game):
     """Test 4 (BONUS): la match en cache est le mauvais, donc une erreur est levée.
@@ -91,7 +91,7 @@ def check_wrong_cache(fetch_fn, game_id, game):
         folder.mkdir()
         # On remplit nous-mêmes le cache avec game_id mais avec le mauvais nom other_id
         (folder / f"{other_id}.json").write_text(json.dumps(game), encoding="utf-8")
-        with patch("requests.get", side_effect=AssertionError("Request sent without error flag")) as get:
+        with patch("requests.get", side_effect=AssertionError("Request sent without name error flag")) as get:
             # On essaie la fonction
             try:
                 fetch_fn(game_id, folder)
@@ -104,14 +104,32 @@ def check_wrong_cache(fetch_fn, game_id, game):
         get.assert_called_once()
     
 def run_tests(fetch_fn, game_id, game):
-    """ Run all 4 tests on fecth_fn and return resukts for each test.
+    """ Run all 4 tests on fecth_fn and return results for each test. lambda idea comes from Claude
 
     :param fetch_fn:
     :param game_id:
     :param game:
     :return:
     """
-    check_download(fetch_fn, game_id, game)
-    check_cache_no_request(fetch_fn, game_id, game)
-    check_failed_request(fetch_fn, game_id)
-    check_wrong_cache(fetch_fn, game_id, game)
+    # On fait un dictionnaire pour pouvoir parcourir nos fonctions
+    # lambda permet de créer une fonction sans non ni paramètre qui va exécuter la fonction quand elle sera appelé
+    test = {
+        "1. Known game": lambda: check_download(fetch_fn, game_id, game),
+        "2. Cache check": lambda: check_cache_no_request(
+            fetch_fn, game_id, game
+        ),
+        "3. Failed HTTP request": lambda: check_failed_request(fetch_fn, game_id),
+        "4. Wrong game in cache": lambda: check_wrong_cache(
+            fetch_fn, game_id, game
+        ),
+    }
+    results = {}
+    for name, test in test.items():
+        try:
+            test() # Test function is run
+            results[name] = "OK"
+        except AssertionError as e: # If test function failed. Before Exception because assertion is exception
+            results[name] = f"ÉCHEC : {e}"
+        except Exception as e: # Recommended by Claude, allows error identification other than my Assert
+            result[name] = f"ERREUR : {type(e).__name__}: {e}" # Prints the Exception type
+    return results
