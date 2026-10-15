@@ -6,15 +6,24 @@ Tous les prompts sont sauvegardé dans log comme demandé. Je peux réutiliser d
 """
 import re
 
-def extract_code(answer):
+def extract_text(answer,type = "code"):
     """Sortir le code du bloc ```python``` de la réponse actuelle de qwem
 
     """
-    # Code inspiré par Claude
-    match =  re.search(r"```(?:python)?\s*\n(.*?)```", answer, re.DOTALL)
-    # Code JC
-    if not match:
-        raise ValueError ("Code extraction failed. Check answer")
+    if type == "code": 
+        # Code inspiré par Claude
+        match =  re.search(r"```(?:python)?\s*\n(.*?)```", answer, re.DOTALL)
+        # Code JC
+        if not match:
+            raise ValueError ("Code extraction failed. Check answer")
+    if type == "new_prompt":
+        match = re.search(r"<(?:new_prompt>)?(.*?)</new_prompt>", answer, re.DOTALL)
+        # Code JC
+        if not match:
+            raise ValueError("New prompt extraction failed. Check new prompt")
+    else:
+        raise ValueError("Wrong variable type in extract_text(answer,type)")
+        
     return match.group(1)
 def load_function(code,name):
     """transformer str venant de extract en fonction python.
