@@ -164,3 +164,33 @@ def free_qwen(device):
     torch.cuda.empty_cache() if device == "cuda" else (
         torch.mps.empty_cache() if device == "mps" else None
     )
+
+def ask_qwen(model,tokenizer, prompt,context, p, extra, log_call,log_path,profile_name,version_prompt):
+    messages = build_messages(prompt,context,system=p["system"])
+    results = generate(
+        model,
+        tokenizer,
+        messages,
+        max_new_tokens=p["max_new_tokens"],
+        do_sample=p["do_sample"],
+    )
+    log_call(
+        log_path,
+        messages,
+        results,
+        extra={
+            "profile": profile_name,
+            "profile_version": p["version"],
+            "retrieved": results,
+            "max_new_tokens": p["max_new_tokens"],
+            "do_sample": p["do_sample"],
+            "context_format": "v5",
+            "task_version": version_prompt,
+        },
+    )
+    print(results["answer"])
+    print(
+        f"\n{results['n_token_in']} tokens en entrée, {results['n_token_out']} générés, {results['duration_s']:.1f} s"
+    )
+    return messages
+    
