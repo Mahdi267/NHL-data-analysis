@@ -76,14 +76,27 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
         df_data = pd.json_normalize(data, "plays", ["id", "season", ["homeTeam", "id"], ["homeTeam", "abbrev"], ["awayTeam", "id"], ["awayTeam", "abbrev"]])
     else:
         df_data = pd.json_normalize(data)
+
+        # Build the team name comlumn
+        df_data["homeTeam_name"] = df_data["homeTeam.placeName.default"] + " " + df_data["homeTeam.commonName.default"]
+        df_data["awayTeam_name"] = df_data["awayTeam.placeName.default"] + " " + df_data["awayTeam.commonName.default"]
+        
+        df_data.loc[:, [
+            "id",
+            "gameType",
+            "season",
+            "homeTeam.id",
+            "homeTeam_name",
+            "awayTeam.id",
+            "awayTeam_name"
+        ]]
+
         df_data = df_data.rename(columns={
-            "id": "game_id",
-            "gameType": "game_type",
-            "season": "season",
-            "homeTeam.id": "homeTeam_id",
-            "homeTeam.abbrev": "homeTeam_abbrev",
-            "awayTeam.id": "awayTeam_id",
-            "awayTeam.abbrev": "awayTeam_abbrev"
+        "id": "game_id",
+        "gameType": "game_type",
+        "season": "season",
+        "homeTeam.id": "homeTeam_id",
+        "awayTeam.id": "awayTeam_id"
         })
         return df_data
 
