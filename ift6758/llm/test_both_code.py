@@ -140,3 +140,32 @@ def run_tests(fetch_fn, game_id, game):
                 f"ERREUR : {type(e).__name__}: {e}"  # Prints the Exception type
             )
     return results
+
+def check_season_download():
+    """Fonction qui simule un faux fetch game qui renvoie 3 match suivi d'un 404. On vérifie si la fonction
+    fetch_season_llm s'arrêt bien après et produit un bon output. (3 dict,IDs int, en ordre)
+
+    :return:
+    """
+
+def check_playoff_structure():
+    """Check if 8, 4, 2, 1 rule an pass next serie at 404 is fufilled. Compare answer with known
+    series match list and check for wrong calls ex(0191,0251, etc)
+    :return:
+    """
+def check_error_prop():
+    """Same as chec_failed_request, sceks if error propagates
+
+    :return:
+    """
+def check_unexisting_season():
+    """Checks handeling of none existing season. Suppose to receive []
+    :return:
+    """
+
+def check_game_in_cache():
+    """Test to see if season with games already in cache request for said games or not. Should use game in cache and
+    not request API.
+
+    :return:
+    """
