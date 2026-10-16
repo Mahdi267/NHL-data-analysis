@@ -2,7 +2,7 @@
 Un profil par tâche
 """
 
-# Prompts directement tirés de la demo 2 du cours.
+# Prompts directement tirés de la demo 2 du cours. Utilisé pour tester les réponses de qwen
 OG_TACHE_1 = """
 Write a Python function fetch_game_llm(game_id, cache_dir).
 Requirements from our project:
@@ -27,15 +27,23 @@ PROFILES = {
     },
     "gen_code": {
         "system": "You write concise, correct Python code.",
-        "max_new_tokens": 768,
+        "max_new_tokens": 1024, # Needed to increase form 768 to 1024 for fetch_season_llm
         "do_sample": False,
         "k": 3,
         "version": "v1",
         "retrieval_query": "Which endpoint retrieves play-by-play information for a specific game ID?",
     },
+    "gen_tidy": {
+        "system": "You write concise, correct Python code.",
+        "max_new_tokens": 2048, # Needs to be high, Mahdi function is about 150 lines without space
+        "do_sample": False,
+        "k": 3,
+        "version": "v1",
+        "retrieval_query": None, # pas de context
+    },
     "refine": {
         "system": "You improve task prompts for a code-generating model, using the original prompt, the generated code, its test results and the API documentation. The code model will only see the new prompt: it will not see the previous code or the test results. Turn each failed test into an explicit, self-contained requirement. Keep every original requirement. ",
-        "max_new_tokens": 512,  # Environ 4 fois plus que le prompt TÂCHE_CODE
+        "max_new_tokens": 1024,  # Environ 7 fois plus que le prompt OG_TACHE_1. Nécéssaire pour prompt fetch_season_llm
         "do_sample": False,
         "k": None,  # On réutilise contexte original
         "version": "v2",
@@ -55,4 +63,5 @@ PROFILES = {
         "version": "v1",
         "retrieval_query": None,
     },
+
 }
