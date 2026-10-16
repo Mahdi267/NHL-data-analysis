@@ -4,6 +4,17 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
+def games_ids(season):
+    """
+    Return in a list all the game ids for the season.
+
+    Parameters:
+            Season (int) : Season to take the games from
+
+    """
+    pathlist = Path(f"../notebooks/data/raw/{season}")
+    return [p.stem for p in pathlist.glob("*.json")]
+
 def games_list(season, events=True) -> pd.DataFrame:
     """
     Function to put all the games dataframe for a season in a list and merge them into one dataframe.
@@ -14,12 +25,9 @@ def games_list(season, events=True) -> pd.DataFrame:
     Returns:
         pd.DataFrame
     """
-    pathlist = Path(f"../notebooks/data/raw/{season}")
-    games_ids = [p.stem for p in pathlist.glob("*.json")]
-
     df_games_list = []
 
-    for game_id in games_ids:
+    for game_id in games_ids(season):
         df = json2tidy(f"../notebooks/data/raw/{season}/{game_id}.json", events)
         df_games_list.append(df)
 

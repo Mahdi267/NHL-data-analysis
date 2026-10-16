@@ -12,6 +12,11 @@ def ask_user(label):
     answer = input(label).strip()
     return answer if answer else None
 
+def confirm(label):
+    """Question oui/non. True seulement si la réponse est o/oui/y/yes."""
+    answer = ask_user(f"{label} (y/n) : ")
+    return answer is not None and answer.lower() in {"o", "oui", "y", "yes"}
+
 
 def main():
     """Charge Qwen Une seule fois et créer fichier de log

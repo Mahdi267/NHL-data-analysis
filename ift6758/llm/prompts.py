@@ -3,7 +3,7 @@ Un profil par tâche
 """
 
 # Prompts directement tirés de la demo 2 du cours.
-TACHE_CODE = """
+OG_TACHE_1 = """
 Write a Python function fetch_game_llm(game_id, cache_dir).
 Requirements from our project:
 - Use requests, pathlib and json. Include imports and a docstring.
@@ -15,7 +15,6 @@ Requirements from our project:
 - Return the full game dictionary. Validate cached data too.
 Return only the function and imports in a Python code block.
 """
-TACHE_CODE_VERSION = "v1"
 # Les system_prompt sont directements tirés de la démo 2, cellule 13 et 16. Il s'agit de mon point de départ.
 PROFILES = {
     "qr_api": {
@@ -33,5 +32,27 @@ PROFILES = {
         "k": 3,
         "version": "v1",
         "retrieval_query": "Which endpoint retrieves play-by-play information for a specific game ID?",
+    },
+    "refine": {
+        "system": "You improve task prompts for a code-generating model, using the original prompt, the generated code, its test results and the API documentation. The code model will only see the new prompt: it will not see the previous code or the test results. Turn each failed test into an explicit, self-contained requirement. Keep every original requirement. ",
+        "max_new_tokens": 512,  # Environ 4 fois plus que le prompt TÂCHE_CODE
+        "do_sample": False,
+        "k": None,  # On réutilise contexte original
+        "version": "v2",
+        "retrieval_query": None,
+    },
+    "diagnose": {
+        "system": """You are a code reviewer who diagnoses failed tests.
+                   You receive a task prompt, the Python code generated from it, and the test results. 
+                   For each failed test, compare what the code actually does with what the test expected, and identify the root cause in the code's behavior.
+                   Then state which requirement is missing or unclear in the task prompt.
+                   Base your diagnosis only on the code and the test results; do not invent problems that the tests do not show.
+                   Do not write code and do not rewrite the task prompt.
+                   """,
+        "max_new_tokens": 512,  # Environ 4 fois plus que le prompt TÂCHE_CODE
+        "do_sample": False,
+        "k": None,  # On réutilise contexte original
+        "version": "v1",
+        "retrieval_query": None,
     },
 }
