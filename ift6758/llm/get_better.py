@@ -25,6 +25,7 @@ def extract_text(answer,tag = "code"):
         raise ValueError("Wrong variable type in extract_text(answer,type)")
         
     return match.group(1)
+
 def load_function(code,name):
     """transformer str venant de extract en fonction python.
     Avertissement de https://docs.python.org/3/builtins/functions.html#exec, il faut s'assurer que le code est ok
@@ -76,3 +77,7 @@ def build_refine_prompt(task, code, context, report):
         "Return only the new task prompt inside <new_prompt></new_prompt> tags."
     ]
     return "\n\n".join(parts)
+
+def all_passed(test_results):
+    """True si tous les statuts de run_tests valent "OK"."""
+    return all(status == "OK" for status in test_results.values())
