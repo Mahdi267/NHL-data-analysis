@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-def games_list(season) -> pd.DataFrame:
+def games_list(season, events=True) -> pd.DataFrame:
     """
     Function to put all the games dataframe for a season in a list and merge them into one dataframe.
 
@@ -20,7 +20,7 @@ def games_list(season) -> pd.DataFrame:
     df_games_list = []
 
     for game_id in games_ids:
-        df = json2tidy(f"../notebooks/data/raw/{season}/{game_id}.json")
+        df = json2tidy(f"../notebooks/data/raw/{season}/{game_id}.json", events)
         df_games_list.append(df)
 
     merged_df_regular = pd.concat(df_games_list, ignore_index=True)

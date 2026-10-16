@@ -62,7 +62,7 @@ import json
 # - shot type
 # - whether the shot was taken on an empty net
 # - whether the goal was scored at even strength, shorthanded, or on the power play
-def json2tidy(raw_data: str | dict) -> pd.DataFrame:
+def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     """Convert raw NHL play-by-play JSON data into a tidy DataFrame."""
 
     if isinstance(raw_data, str):
@@ -71,8 +71,21 @@ def json2tidy(raw_data: str | dict) -> pd.DataFrame:
     else:
         data = raw_data
 
-    # Normalize the json data
-    df_data = pd.json_normalize(data, "plays", ["id", "season", ["homeTeam", "id"]])
+    # Normalize the json data with or without the events
+    if events:
+        df_data = pd.json_normalize(data, "plays", ["id", "season", ["homeTeam", "id"], ["homeTeam", "abbrev"], ["awayTeam", "id"], ["awayTeam", "abbrev"]])
+    else:
+        df_data = pd.json_normalize(data)
+        df_data = df_data.rename(columns={
+            "id": "game_id",
+            "gameType": "game_type",
+            "season": "season",
+            "homeTeam.id": "homeTeam_id",
+            "homeTeam.abbrev": "homeTeam_abbrev",
+            "awayTeam.id": "awayTeam_id",
+            "awayTeam.abbrev": "awayTeam_abbrev"
+        })
+        return df_data
 
     # Filter the goal and shot-on-goal only
     df_goals_shots = df_data[
