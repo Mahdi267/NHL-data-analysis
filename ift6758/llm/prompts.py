@@ -41,4 +41,18 @@ PROFILES = {
         "version": "v2",
         "retrieval_query": None,
     },
+    "diagnose": {
+        "system": """You are a code reviewer who diagnoses failed tests.
+                   You receive a task prompt, the Python code generated from it, and the test results. 
+                   For each failed test, compare what the code actually does with what the test expected, and identify the root cause in the code's behavior.
+                   Then state which requirement is missing or unclear in the task prompt.
+                   Base your diagnosis only on the code and the test results; do not invent problems that the tests do not show.
+                   Do not write code and do not rewrite the task prompt.
+                   """,
+        "max_new_tokens": 512,  # Environ 4 fois plus que le prompt TÂCHE_CODE
+        "do_sample": False,
+        "k": None,  # On réutilise contexte original
+        "version": "v1",
+        "retrieval_query": None,
+    },
 }
