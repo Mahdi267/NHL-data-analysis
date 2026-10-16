@@ -25,6 +25,7 @@ import pandas as pd
 import torch
 from importlib.metadata import version
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from ift6758.llm.qwen_log import create_log, log_call
 
 
 MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
@@ -165,9 +166,18 @@ def free_qwen(device):
         torch.mps.empty_cache() if device == "mps" else None
     )
 
-def ask_qwen(model,tokenizer, prompt,context, p, extra, log_call,log_path,profile_name,version_prompt):
-    messages = build_messages(prompt,context,system=p["system"])
-    results = generate(
+def ask_qwen(model, tokenizer, log_path, prompt, context, profile, extra=None):
+    """Sends a prompt to Qwen with PROFILES, logs answer and displays it.
+
+    :param prompt: users message
+    :param context: RAG or None
+    :param profile_name: PROFILES key ("gen_code", "refine", ...)
+    :param extra: log info (iteration, task_version, ...)
+    :return:
+    """
+    p = profile
+    messages = build_messages(prompt, context, system=p["system"])
+    result = generate(
         model,
         tokenizer,
         messages,
@@ -177,20 +187,22 @@ def ask_qwen(model,tokenizer, prompt,context, p, extra, log_call,log_path,profil
     log_call(
         log_path,
         messages,
-        results,
+        result,
         extra={
-            "profile": profile_name,
+            "profile": None,
             "profile_version": p["version"],
-            "retrieved": results,
             "max_new_tokens": p["max_new_tokens"],
             "do_sample": p["do_sample"],
             "context_format": "v5",
-            "task_version": version_prompt,
+            **(extra or {}),
         },
     )
-    print(results["answer"])
+    print(result["answer"])
     print(
-        f"\n{results['n_token_in']} tokens en entrée, {results['n_token_out']} générés, {results['duration_s']:.1f} s"
+        f"\n{result['n_token_in']} tokens in, {result['n_token_out']} generated, {result['duration_s']:.1f} s"
     )
-    return messages
+    # Check if we go over max_new_token
+    if result["n_token_out"] >= p["max_new_tokens"]:
+        print("max_new_tokens exceeded : troncated output")
+    return result
     
