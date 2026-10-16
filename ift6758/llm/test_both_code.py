@@ -202,16 +202,20 @@ def check_playoff_structure(fetch_season_fn):
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
             result = fetch_season_fn(2016, 3, Path(temp_dir))
-
+    # Every ID must have 10 numbers
+    bad = [i for i in calls if len(str(i)) != 10]
+    assert not bad, f"Every game_id must have exactly 10 digits (e.g. 2016030123). These ids are wrong: {bad[:3]}"
     # unexisting serie must not be called
     wrong = [i for i in calls if i in forbidden]
     assert not wrong, (
         f"Rounds 1, 2, 3, 4 have 8, 4, 2, 1 matchups, but these non-existing series were requested: {wrong}"
     )
     # 15 match, function visits each series
+    # Added first calls made so refiner can see mistake between good and bad number
+    # Changed prompt because it seems to cinfuse qwen
     ids = [g["id"] for g in result]
     assert ids == existing, (
-        f"Expected one game per series ({len(existing)} games), got {len(ids)}: {ids}"
+        f"Some playoff games were not returned: after a 404, the function must move to the next matchup, not stop. Got {len(ids)} games, first calls: {calls[:3]}"
     )
 
 
