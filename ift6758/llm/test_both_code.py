@@ -48,7 +48,7 @@ def check_cache_no_request(fetch_fn, game_id, game):
         (folder / f"{game_id}.json").write_text(json.dumps(game), encoding="utf-8")
         with patch(
             "requests.get",
-            side_effect=AssertionError("Cache was ignored : request sent"),
+            side_effect=AssertionError("File in cache was ignored : request for an existing file (in cache) was sent"),
         ) as get:
             result = fetch_fn(game_id, folder)
         # On vérifie si Mock a été appelé. Si get a été appelé, alors la fonction a ignoré le cache
@@ -78,7 +78,7 @@ def check_failed_request(fetch_fn, game_id):
             else:
                 raise AssertionError("No error even with HTTP flag")
         get.assert_called_once()
-        assert not (folder / f"{game_id}.json").exists(), "File cached even with error"
+        assert not (folder / f"{game_id}.json").exists(), "File cached even if the client returned an error"
 
 
 def check_wrong_cache(fetch_fn, game_id, game):
@@ -108,7 +108,7 @@ def check_wrong_cache(fetch_fn, game_id, game):
                 pass
             # Sinon on avertie que problème
             else:
-                raise AssertionError("Wrong cached match accepted without error flag")
+                raise AssertionError(f"cache file {other_id}.json contained a game whose id is {game_id}; the function returned it instead of raising ValueError")
         get.assert_not_called()
 
 
