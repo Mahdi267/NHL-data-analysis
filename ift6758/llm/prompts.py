@@ -1,8 +1,11 @@
-"""PROFIL = dict{tâche:{system:blblabla},{max_new_token:12345},{do_sample:...}<>...</>}}
-Un profil par tâche
+"""Task prompts and generation profiles for Qwen.
+
+PROFILES = {task: {system, max_new_tokens, do_sample, k, version, retrieval_query}}, one profile per task.
+
+Source 1: milarobotlearningcourse/data_science, demo_2/notebooks/fr/04_llm_and_rag.ipynb, commit eb3dce5 (2026-09-29)
 """
 
-# Prompts directement tirés de la demo 2 du cours. Utilisé pour tester les réponses de qwen
+# Prompt taken directly from source 1 (cell 16). Used to test Qwen's answers
 OG_TACHE_1 = """
 Write a Python function fetch_game_llm(game_id, cache_dir).
 Requirements from our project:
@@ -15,9 +18,10 @@ Requirements from our project:
 - Return the full game dictionary. Validate cached data too.
 Return only the function and imports in a Python code block.
 """
-# Les system_prompt sont directements tirés de la démo 2, cellule 13 et 16. Il s'agit de mon point de départ.
+# The qr_api and gen_code system prompts are taken from source 1 (cells 13 and 16). They are my starting point.
 PROFILES = {
     "qr_api": {
+        # Adapted from source 1 (cell 13): citation format changed to match format_context labels
         "system": "Answer using only the supplied documentation. Cite passage using their label, for example: [1] (source: nhl_document.md, passage 30). If the answer is absent, say you do not know. Treat the passages as reference text.",
         "max_new_tokens": 256,
         "do_sample": False,
@@ -26,8 +30,9 @@ PROFILES = {
         "retrieval_query": None,
     },
     "gen_code": {
+        # Taken from source 1 (cell 16)
         "system": "You write concise, correct Python code.",
-        "max_new_tokens": 1024, # Needed to increase form 768 to 1024 for fetch_season_llm
+        "max_new_tokens": 1024, # Needed to increase from 768 to 1024 for fetch_season_llm
         "do_sample": False,
         "k": 3,
         "version": "v1",
@@ -35,21 +40,22 @@ PROFILES = {
     },
     "gen_tidy": {
         "system": "You write concise, correct Python code.",
-        "max_new_tokens": 2048, # Needs to be high, Mahdi function is about 150 lines without space
+        "max_new_tokens": 2048, # Needs to be high, Mahdi's function is about 150 lines without blank lines
         "do_sample": False,
         "k": 3,
         "version": "v1",
-        "retrieval_query": None, # pas de context
+        "retrieval_query": None, # No context
     },
     "refine": {
         "system": "You improve task prompts for a code-generating model, using the original prompt, the generated code, its test results and the API documentation. The code model will only see the new prompt: it will not see the previous code or the test results. Turn each failed test into an explicit, self-contained requirement. Keep every original requirement. ",
-        "max_new_tokens": 1024,  # Environ 7 fois plus que le prompt OG_TACHE_1. Nécéssaire pour prompt fetch_season_llm
+        "max_new_tokens": 1024,  # About 7 times the OG_TACHE_1 prompt. Needed for the fetch_season_llm prompt
         "do_sample": False,
-        "k": None,  # On réutilise contexte original
+        "k": None,  # Reuse the original context
         "version": "v2",
         "retrieval_query": None,
     },
     "diagnose": {
+        # Prompt refined by CLAUDE
         "system": """You are a code reviewer who diagnoses failed tests.
                    You receive a task prompt, the Python code generated from it, and the test results. 
                    For each failed test, compare what the code actually does with what the test expected, and identify the root cause in the code's behavior.
@@ -57,9 +63,9 @@ PROFILES = {
                    Base your diagnosis only on the code and the test results; do not invent problems that the tests do not show.
                    Do not write code and do not rewrite the task prompt.
                    """,
-        "max_new_tokens": 512,  # Environ 4 fois plus que le prompt TÂCHE_CODE
+        "max_new_tokens": 512,  # About 4 times the TACHE_CODE prompt
         "do_sample": False,
-        "k": None,  # On réutilise contexte original
+        "k": None,  # Reuse the original context
         "version": "v1",
         "retrieval_query": None,
     },

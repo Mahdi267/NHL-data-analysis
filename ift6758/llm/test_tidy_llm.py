@@ -1,3 +1,7 @@
+"""
+Tests used to compare the Qwen-generated tidy function with Mahdi's json2tidy (ift6758/features/tidy.py).
+Same structure as test_both_code.py.
+"""
 import json
 from pathlib import Path
 
@@ -11,15 +15,20 @@ COLUMNS = ["game_id", "event_id", "season", "game_type", "period", "time", "team
 
 
 def _load_game():
-    """Loads game to comapre with results
+    """Load the reference game to compare with the results.
 
+    :return: Game JSON
+    :rtype: dict
     """
     return json.loads(GAME_FILE.read_text(encoding="utf-8"))
 
 
 def check_structure(tidy_fn):
-    """TChecks if retrun is pandas with right columns like Madhi's code
+    """Check that tidy_fn returns a non-empty DataFrame with the same columns as Mahdi's code.
 
+    :param tidy_fn: Function to test
+    :type tidy_fn: callable
+    :return: None
     """
     df = tidy_fn(str(GAME_FILE))
     assert isinstance(df, pd.DataFrame), f"Must return a pandas DataFrame, got: {type(df).__name__}"
@@ -28,7 +37,13 @@ def check_structure(tidy_fn):
     assert len(df) > 0, "The DataFrame is empty for a real game"
 
 def run_tidy_tests(tidy_fn):
-    """Run the  generic tidy tests on tidy_fn. Same structure as run_tests."""
+    """Run the generic tidy tests on tidy_fn. Same structure as run_tests.
+
+    :param tidy_fn: Function to test
+    :type tidy_fn: callable
+    :return: {test name: status}
+    :rtype: dict
+    """
     tests = {
         "1. Structure": lambda: check_structure(tidy_fn),
     }
@@ -38,7 +53,7 @@ def run_tidy_tests(tidy_fn):
             test()
             results[name] = "OK"
         except AssertionError as e:
-            results[name] = f"ÉCHEC : {e}"
+            results[name] = f"FAIL : {e}"
         except Exception as e:
-            results[name] = f"ERREUR : {type(e).__name__}: {e}"
+            results[name] = f"ERROR : {type(e).__name__}: {e}"
     return results

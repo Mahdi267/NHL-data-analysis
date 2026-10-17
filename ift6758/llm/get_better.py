@@ -1,71 +1,93 @@
 
 """
-Je veux que le modèle puisse recevoir le prompt d'originie, le code cérer, les erreurs (retours et messages terminal) ainis que le RAG pour pouvoir améliorer lui-même sont prompt.
-Une fois l'amélioration du prompt fait, je peux regarder le prompt et confirmer ou valider avant que qwen regénère un nouveau code. Je valide le code et on relance les tests.
-Tous les prompts sont sauvegardé dans log comme demandé. Je peux réutiliser des éléments de chat.py
+Prompt refinement loop: Qwen receives the original prompt, the generated code, the test results and the RAG
+context, and proposes an improved task prompt. I review and approve the new prompt before Qwen regenerates the
+code, then the tests are run again. All prompts are saved in the log.
+
+Source 1: https://huggingface.co/learn/cookbook/advanced_rag, Hugging Face cookbook (Advanced RAG)
+Source 2: https://docs.python.org/3/library/functions.html#exec, Python documentation (exec)
+Source 3: Claude (Anthropic), suggestions in chat, see comments
 """
 import re
 
 def extract_text(answer,tag = "code"):
-    """Sortir le code du bloc ```python``` de la réponse actuelle de qwem
+    """Extract the code block or the <new_prompt> block from a Qwen answer.
 
+    :param answer: Qwen answer
+    :type answer: str
+    :param tag: "code" or "new_prompt"
+    :type tag: str
+    :return: Extracted text
+    :rtype: str
+    :raises ValueError: If nothing is found or the tag is unknown
     """
     if tag == "code":
-        # Code inspiré par Claude
+        # Regex inspired by CLAUDE
         match =  re.search(r"```(?:python)?\s*\n(.*?)```", answer, re.DOTALL)
-        # Code JC
         if not match:
             raise ValueError ("Code extraction failed. Check answer")
     elif tag == "new_prompt":
         match = re.search(r"<new_prompt>(.*?)</new_prompt>", answer, re.DOTALL)
-        # Code JC
         if not match:
             raise ValueError("New prompt extraction failed. Check new prompt")
     else:
         raise ValueError("Wrong variable type in extract_text(answer,type)")
-        
+
     return match.group(1)
 
 def load_function(code,name):
-    """transformer str venant de extract en fonction python.
-    Avertissement de https://docs.python.org/3/builtins/functions.html#exec, il faut s'assurer que le code est ok
-    avant d'appeler exec. C'est correct car on supervise le output de qwen.
+    """Turn the extracted code into a callable Python function.
 
-    :param code:
-    :param name:
-    :return:
+    Warning from source 2: the code must be checked before calling exec. Fine here because
+    Qwen's output is reviewed first.
+
+    :param code: Python code
+    :type code: str
+    :param name: Function name to return
+    :type name: str
+    :return: The function
+    :rtype: callable
+    :raises ValueError: If the function is not defined in the code
     """
     dic_code={}
+    # cuts our text into function(s). dic_code retain text before def(), the function name
     exec(code,dic_code)
     if name not in dic_code:
-        raise ValueError(f"La fonction {name} est absente de la réponse de qwen")
+        raise ValueError(f"Function {name} is missing from Qwen's answer")
     fn = dic_code[name]
     return fn
 
 def format_test_report(result):
-    """rendre run_test lisible pour qwen dans son contexte
+    """Turn the run_tests output into a readable report for Qwen's context.
 
-    :param result:
-    :return:
+    :param result: Output of run_tests
+    :type result: dict
+    :return: Report
+    :rtype: str
     """
     n_ok = sum(i=="OK" for i in result.values())
     parts = [f"{n_ok}/{len(result)} tests passed"]
-    # run_test renvoie {nom:statut}
+    # run_tests returns {name: status}
     for name, status in result.items():
         parts.append(f"Test: {name}, Status: {status}")
     report = "\n".join(parts)
     return report
 
 def build_refine_prompt(task, code, context, report):
-    """Assemble la tâche, le code généré, le rapport de tests et la doc RAG
-    en un message pour que Qwen propose un nouveau prompt de tâche.
-    :param task:
-    :param code:
-    :param context:
-    :param report:
-    :return:
+    """Assemble the task, generated code, test report and RAG context into one refine prompt.
+
+    :param task: Original task prompt
+    :type task: str
+    :param code: Generated code
+    :type code: str
+    :param context: RAG context
+    :type context: str
+    :param report: Output of format_test_report
+    :type report: str
+    :return: Refine prompt
+    :rtype: str
     """
-    # https://huggingface.co/learn/cookbook/advanced_rag pour les instructions et structure
+    # Structure and instructions adapted from source 1
     parts = [
         f"Here is the original task prompt.\n<task>{task}</task>",
         f"Here is the code generated from this task prompt.\n<generated_code>{code}</generated_code>",
@@ -79,5 +101,11 @@ def build_refine_prompt(task, code, context, report):
     return "\n\n".join(parts)
 
 def all_passed(test_results):
-    """True si tous les statuts de run_tests valent "OK"."""
+    """Check if every test passed.
+
+    :param test_results: Output of run_tests
+    :type test_results: dict
+    :return: True if every status is "OK"
+    :rtype: bool
+    """
     return all(status == "OK" for status in test_results.values())
