@@ -291,6 +291,12 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
         "strength"
     ] = "shorthanded"
 
+    # Drop all unecessary colomns
+    df_merged_name_play.drop(columns=["scorerName", "scorerLastName"], inplace=True)
+
+    # Rename names colums
+    df_merged_name_play.rename(columns={"shooterName": "player_name", "shooterLastName": "player_last_name"})
+
     # Rename columns to make the dataframe easier to read
     df_merged_name_play = df_merged_name_play.rename(columns={
         "id": "game_id",
@@ -308,10 +314,8 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
         "details.goalieInNetId": "goalie_id",
         "details.shotType": "shot_type",
         "details.eventOwnerTeamId": "team_id",
-        "shooterName": "shooter",
-        "shooterLastName": "shooter_last_name",
-        "scorerName": "scorer",
-        "scorerLastName": "scorer_last_name",
+        "shooterName": "player",
+        "shooterLastName": "player_last_name",
         "goalieName": "goalie",
         "goalieLastName": "goalie_last_name"
     })
