@@ -137,6 +137,9 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     # Select only wanted information
     df_filtered_info = df_goals_shots.reindex(columns=wanted_columns).copy()
     df_filtered_info["game_type"] = game_type
+    df_filtered_info["details.shootingPlayerId"] = df_filtered_info[
+        "details.shootingPlayerId"
+    ].fillna(df_filtered_info["details.scoringPlayerId"])
 
     # Normalize the json data to get players name
     df_name_data = pd.json_normalize(data, "rosterSpots")
@@ -229,12 +232,17 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     # 1541 = away 5 vs home 4
     # 1451 = away 4 vs home 5
 
+    # Players on ice = goalie + skaters (a pulled goalie gives an extra skater)
+    situation = df_merged_name_play["situationCode"].fillna("0000")
+    df_merged_name_play["away_players"] = situation.str[0].astype(int) + situation.str[1].astype(int)
+    df_merged_name_play["home_players"] = situation.str[2].astype(int) + situation.str[3].astype(int)
+
     # 1. Even strength
     df_merged_name_play.loc[
         (df_merged_name_play["typeDescKey"] == "goal") &
         (
-            df_merged_name_play["situationCode"].str[1].astype(int) ==
-            df_merged_name_play["situationCode"].str[2].astype(int)
+            df_merged_name_play["away_players"] ==
+            df_merged_name_play["home_players"]
         ),
         "strength"
     ] = "even"
@@ -243,8 +251,8 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     df_merged_name_play.loc[
         (df_merged_name_play["typeDescKey"] == "goal") &
         (
-            df_merged_name_play["situationCode"].str[1].astype(int) >
-            df_merged_name_play["situationCode"].str[2].astype(int)
+            df_merged_name_play["home_players"] >
+            df_merged_name_play["away_players"]
         ) &
         (df_merged_name_play["details.eventOwnerTeamId"] == home_id),
         "strength"
@@ -254,8 +262,8 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     df_merged_name_play.loc[
         (df_merged_name_play["typeDescKey"] == "goal") &
         (
-            df_merged_name_play["situationCode"].str[2].astype(int) >
-            df_merged_name_play["situationCode"].str[1].astype(int)
+            df_merged_name_play["away_players"] >
+            df_merged_name_play["home_players"]
         ) &
         (df_merged_name_play["details.eventOwnerTeamId"] == away_id),
         "strength"
@@ -265,10 +273,10 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     df_merged_name_play.loc[
         (df_merged_name_play["typeDescKey"] == "goal") &
         (
-            df_merged_name_play["situationCode"].str[1].astype(int) >
-            df_merged_name_play["situationCode"].str[2].astype(int)
+            df_merged_name_play["away_players"] >
+            df_merged_name_play["home_players"]
         ) &
-        (df_merged_name_play["details.eventOwnerTeamId"] == away_id),
+        (df_merged_name_play["details.eventOwnerTeamId"] == home_id),
         "strength"
     ] = "shorthanded"
 
@@ -276,10 +284,10 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     df_merged_name_play.loc[
         (df_merged_name_play["typeDescKey"] == "goal") &
         (
-            df_merged_name_play["situationCode"].str[2].astype(int) >
-            df_merged_name_play["situationCode"].str[1].astype(int)
+            df_merged_name_play["home_players"] >
+            df_merged_name_play["away_players"]
         ) &
-        (df_merged_name_play["details.eventOwnerTeamId"] == home_id),
+        (df_merged_name_play["details.eventOwnerTeamId"] == away_id),
         "strength"
     ] = "shorthanded"
 
