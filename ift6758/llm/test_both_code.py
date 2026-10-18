@@ -1,3 +1,11 @@
+"""
+Tests used to compare the Qwen-generated functions (fetch_game_llm, fetch_season_llm) with William's manual code.
+Each run_* function returns {test name: "OK" | "FAIL : msg" | "ERROR : Type: msg"}.
+
+Source 1: milarobotlearningcourse/data_science, demo_2/notebooks/fr/04_llm_and_rag.ipynb, commit eb3dce5 (2026-09-29)
+Source 2: William Perktold, NHLyear class, ift6758/notebooks/raw_data_acquisition.ipynb
+Source 3: Claude (Anthropic), test code written and reviewed with Claude in chat, see comments
+"""
 import json
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
@@ -7,50 +15,102 @@ import requests
 
 DOCS_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
 
+# This translation layer was made by CLAUDE
+def make_william_fetch(nhl_year_class):
+    """Wrap NHLyear.download (source 2) into the fetch_game_llm signature, raising HTTPError on failure.
 
-# Idée suggérée par Claude. D'ou la nomenclature _fonction
-def _http_error(status):
-    """Build an HTTPError like raise_for_status() does, with response.status_code set."""
+    :param nhl_year_class: William's NHLyear class
+    :type nhl_year_class: type
+    :return: fetch(game_id, cache_dir) -> game
+    :rtype: callable
+    """
+    def william_fetch_game(game_id, cache_dir):
+        # 4 digit int or string corresponding to the year the season starts (ex: 2023 for the 2023-2024 season)
+        season = nhl_year_class(str(game_id)[:4], cache_dir)
+        status_code, game = season.download(game_id, cache_dir)
+        # William returns the http status code AND the json content (play by play): we translate
+        if str(status_code) != "200":
+            raise http_error(int(status_code))
+        return game
+
+    return william_fetch_game
+
+# This translation layer was made by CLAUDE
+def william_cache_file(folder, game_id):
+    """Return William's cache path: cache_dir/<year>/<game_id>.json.
+
+    :param folder: Cache folder
+    :type folder: Path
+    :param game_id: Game id
+    :type game_id: int
+    :return: Cache file path
+    :rtype: Path
+    """
+    return folder / str(game_id)[:4] / f"{game_id}.json"
+
+def http_error(status):
+    """Build an HTTPError like raise_for_status() does.
+
+    :param status: HTTP status code
+    :type status: int
+    :return: Error with response.status_code set
+    :rtype: requests.HTTPError
+    """
     return requests.HTTPError(f"{status} Error", response=Mock(status_code=status))
 
+# Source 3 proposed to add cache_file(folder, gid)
+def check_download(fetch_fn, game_id, game, cache_file=lambda folder, gid: folder / f"{gid}.json"):
+    """Test 1: empty cache, the game is downloaded (mocked), saved and returned.
 
-def check_download(fetch_fn, game_id, game):
-    """Test 1 On a un dossier temporaire pour agir comme cache vide et forcer le téléchargment
-    On a un Mock qui simule une request 'response' et dois agir comme resposne , donc retourner raise_for_status et une méthode json
-    fetch_fn c'est la fonction (llm ou william) a tester.
-    Adapté de la cellule 22 de demo_2/notebooks/fr/04_llm_and_rag.ipynb.
+    :param fetch_fn: Function to test (LLM or William)
+    :type fetch_fn: callable
+    :param game_id: Game id
+    :type game_id: int
+    :param game: Reference game
+    :type game: dict
+    :param cache_file: Cache path builder, different for William
+    :type cache_file: callable
+    :return: None
     """
+    # Adapted from source 1 (cell 22)
     url = f"https://api-web.nhle.com/v1/gamecenter/{game_id}/play-by-play"
     filename = f"{game_id}.json"
-    # On crée un dossier temporaire pour simuler un besoin de download
+    # Temporary folder to force a download
     with TemporaryDirectory() as temp_dir:
         folder = Path(temp_dir) / "raw"
-        # Avec Mock on crée une fausse réponse de l'API
+        # Fake API response with Mock
         fake_response = Mock()
         fake_response.json.return_value = game
+        fake_response.status_code = 200  # William : read status_code instead of raise_for_status
         with patch("requests.get", return_value=fake_response) as get:
             first = fetch_fn(game_id, folder)
         get.assert_called_once_with(url, timeout=30)
         fake_response.raise_for_status.assert_called_once()
-        saved = json.loads((Path(folder) / filename).read_text(encoding="utf-8"))
+        saved = json.loads(cache_file(folder, game_id).read_text(encoding="utf-8"))  # William
         assert first == saved == game
 
 
-def check_cache_no_request(fetch_fn, game_id, game):
+
+def check_cache_no_request(fetch_fn, game_id, game, cache_file=lambda folder, gid: folder / f"{gid}.json"):
+    """Test 2: the game is already in cache, so no request is sent.
+
+    :param fetch_fn: Function to test
+    :type fetch_fn: callable
+    :param game_id: Game id
+    :type game_id: int
+    :param game: Reference game
+    :type game: dict
+    :param cache_file: Cache path builder, different for William
+    :type cache_file: callable
+    :return: None
     """
-    Test 2 de l'énoncé : le match est déjà en cache, donc aucune requète.
-    Adapté de la cellule 22 de demo_2/notebooks/fr/04_llm_and_rag.ipynb.
-    :param fetch_fn:
-    :param game_id:
-    :param game:
-    :return:
-    """
+    # Adapted from source 1 (cell 22)
     with TemporaryDirectory() as temp_dir:
         folder = Path(temp_dir) / "raw"
-        # On fait un directory dans folder
-        folder.mkdir()
-        # On remplit nous-mêmes le cache avant l'appel
-        (folder / f"{game_id}.json").write_text(json.dumps(game), encoding="utf-8")
+        # Create the cache folder (parents=True also creates William's <year> subfolder)
+        cache_file(folder, game_id).parent.mkdir(parents=True, exist_ok=True)  # William
+        # Fill the cache ourselves before the call
+        cache_file(folder, game_id).write_text(json.dumps(game), encoding="utf-8")  # William
         with patch(
             "requests.get",
             side_effect=AssertionError(
@@ -58,78 +118,92 @@ def check_cache_no_request(fetch_fn, game_id, game):
             ),
         ) as get:
             result = fetch_fn(game_id, folder)
-        # On vérifie si Mock a été appelé. Si get a été appelé, alors la fonction a ignoré le cache
+        # If get was called, the function ignored the cache
         get.assert_not_called()
         assert result == game
 
 
-def check_failed_request(fetch_fn, game_id):
-    """Test 3 (BONUS) : la requête échoue (HTTP 404), donc une erreur est levée et rien n'est mis en cache.
-    Code suggéré par la cellule 23 de demo_2/notebooks/fr/04_llm_and_rag.ipynb."""
+def check_failed_request(fetch_fn, game_id, cache_file=lambda folder, gid: folder / f"{gid}.json"):
+    """Test 3 (BONUS): the request fails (HTTP 404), an error is raised and nothing is cached.
+
+    :param fetch_fn: Function to test
+    :type fetch_fn: callable
+    :param game_id: Game id
+    :type game_id: int
+    :param cache_file: Cache path builder, different for William
+    :type cache_file: callable
+    :return: None
+    """
+    # Case suggested by source 1 (cell 23)
     with TemporaryDirectory() as temp_dir:
         folder = Path(temp_dir) / "raw"
-        # Avec Mock on crée une fausse réponse de l'API
+        # Fake API response with Mock
         fake_response = Mock()
-        # On simule une réponse d'erreur de la part de l'API
+        fake_response.status_code = 404  # William : reads status_code instead of raise_for_status
+        # Simulate an error response from the API
         fake_response.raise_for_status.side_effect = requests.HTTPError(
             "404 Client Error"
         )
         with patch("requests.get", return_value=fake_response) as get:
-            # On essaie la fonction
+            # Try the function
             try:
                 fetch_fn(game_id, folder)
-            # On pass si ca agit comme attendu
-            except requests.HTTPError:  # A valider avec william
+            # Pass if it behaves as expected
+            except requests.HTTPError:
                 pass
-            # Sinon on avertie que problème
+            # Otherwise report the problem
             else:
                 raise AssertionError("No error even with HTTP flag")
         get.assert_called_once()
-        assert not (folder / f"{game_id}.json").exists(), (
-            "File cached even if the client returned an error"
+        assert not cache_file(folder, game_id).exists(), (  # William
+                "File cached even if the client returned an error"
         )
 
 
 def check_wrong_cache(fetch_fn, game_id, game):
-    """Test 4 (BONUS): la match en cache est le mauvais, donc une erreur est levée.
-    Cas suggéré par la cellule 23 de demo_2/notebooks/fr/04_llm_and_rag.ipynb.
+    """Test 4 (BONUS): the cached game is the wrong one, so a ValueError is raised.
 
-    :param fetch_fn:
-    :param game_id:
-    :param game:
-    :return:
+    :param fetch_fn: Function to test
+    :type fetch_fn: callable
+    :param game_id: Game id
+    :type game_id: int
+    :param game: Reference game
+    :type game: dict
+    :return: None
     """
+    # Case suggested by source 1 (cell 23)
     other_id = game_id + 1
     with TemporaryDirectory() as temp_dir:
         folder = Path(temp_dir) / "raw"
         folder.mkdir()
-        # On remplit nous-mêmes le cache avec game_id mais avec le mauvais nom other_id
+        # Fill the cache ourselves with game_id under the wrong name other_id
         (folder / f"{other_id}.json").write_text(json.dumps(game), encoding="utf-8")
         with patch(
             "requests.get",
             side_effect=AssertionError("Request sent without name error flag"),
         ) as get:
-            # On essaie la fonction
+            # Try the function
             try:
                 fetch_fn(other_id, folder)
-            # On pass si ca agit comme attendu
-            except ValueError:  # A valider avec le code de William
+            # Pass if it behaves as expected
+            except ValueError:  # To validate with William's code
                 pass
-            # Sinon on avertie que problème
+            # Otherwise report the problem
             else:
                 raise AssertionError(
                     f"cache file {other_id}.json contained a game whose id is {game_id}; the function returned it instead of raising ValueError"
                 )
         get.assert_not_called()
 
-# Le raisonnement derrière les fonctions de tests de saison à été élaboré avec Claude pour aider à valider la structure
-# des fausses données.
+# The reasoning behind the season test functions was developed with source 3, to help validate the structure
+# of the fake data.
 
 def check_season_download(fetch_season_fn):
-    """Fonction qui simule un faux fetch game qui renvoie 3 match suivi d'un 404. On vérifie si la fonction
-    fetch_season_llm s'arrêt bien après et produit un bon output. (3 dict,IDs int, en ordre)
+    """Regular season: fake fetch_game returns 3 games then a 404; check the loop stops and returns 3 sorted games.
 
-    :return:
+    :param fetch_season_fn: Function to test
+    :type fetch_season_fn: callable
+    :return: None
     """
     season = 2016
     existing = [2016020001, 2016020002, 2016020003]  # Match in fake season
@@ -140,16 +214,16 @@ def check_season_download(fetch_season_fn):
         calls.append(game_id)
         if game_id in existing:
             return {"id": game_id, "plays": []}
-        raise _http_error(404)
+        raise http_error(404)
 
     with TemporaryDirectory() as temp_dir:
-        # Fonction by Claude to replace real fetch_game by fake on in fetch_season
+        # Code by source 3 to replace the real fetch_game by the fake one in fetch_season
         with patch.dict(
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
             result = fetch_season_fn(season, 2, Path(temp_dir))
 
-    # Check if 4 calls and no more beacuase of 404
+    # Check if 4 calls and no more because of 404
     assert calls == existing + [2016020004], (
         f"Regular season must stop at the first 404 (game 2016020004). Calls made: {calls}"
     )
@@ -162,12 +236,14 @@ def check_season_download(fetch_season_fn):
 
 
 def check_playoff_structure(fetch_season_fn):
-    """Check if 8, 4, 2, 1 rule an pass next serie at 404 is fufilled. Compare answer with known
-    series match list and check for wrong calls ex(0191,0251, etc)
-    :return:
+    """Playoffs: check the 8-4-2-1 matchups rule, the jump to the next series on 404 and no extra calls.
+
+    :param fetch_season_fn: Function to test
+    :type fetch_season_fn: callable
+    :return: None
     """
     matchups = {1: 8, 2: 4, 3: 2, 4: 1}
-    # Match in fake serie with proper matchup structure
+    # Match in fake serie with proper matchup structure. Fake match was made by source 3 for accuracy
     existing = [
         2016030111,
         2016030121,
@@ -194,10 +270,10 @@ def check_playoff_structure(fetch_season_fn):
         calls.append(game_id)
         if game_id in existing:
             return {"id": game_id, "plays": []}
-        raise _http_error(404)
+        raise http_error(404)
 
     with TemporaryDirectory() as temp_dir:
-        # Fonction by Claude to replace real fetch_game by fake on in fetch_season
+        # Code by source 3 to replace the real fetch_game by the fake one in fetch_season
         with patch.dict(
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
@@ -212,7 +288,7 @@ def check_playoff_structure(fetch_season_fn):
     )
     # 15 match, function visits each series
     # Added first calls made so refiner can see mistake between good and bad number
-    # Changed prompt because it seems to cinfuse qwen
+    # Changed prompt because it seems to confuse qwen
     ids = [g["id"] for g in result]
     assert ids == existing, (
         f"Some playoff games were not returned: after a 404, the function must move to the next matchup, not stop. Got {len(ids)} games, first calls: {calls[:3]}"
@@ -220,9 +296,11 @@ def check_playoff_structure(fetch_season_fn):
 
 
 def check_error_prop(fetch_season_fn):
-    """Same as chec_failed_request, sceks if error propagates
+    """Check that a non-404 error (HTTP 500) propagates and stops the loop.
 
-    :return:
+    :param fetch_season_fn: Function to test
+    :type fetch_season_fn: callable
+    :return: None
     """
     calls = []  # list for requested game_id
 
@@ -231,14 +309,14 @@ def check_error_prop(fetch_season_fn):
         calls.append(game_id)
         if game_id == 2016020001:
             return {"id": game_id, "plays": []}
-        raise _http_error(500)
+        raise http_error(500)
 
     with TemporaryDirectory() as temp_dir:
-        # Fonction by Claude to replace real fetch_game by fake on in fetch_season
+        # Code by source 3 to replace the real fetch_game by the fake one in fetch_season
         with patch.dict(
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
-            try:  # Ty function
+            try:  # Try function
                 fetch_season_fn(2016, 2, Path(temp_dir))
             except requests.HTTPError as e:  # Check if 500 received
                 assert e.response.status_code == 500, (
@@ -255,18 +333,21 @@ def check_error_prop(fetch_season_fn):
 
 
 def check_unexisting_season(fetch_season_fn):
-    """Checks handeling of none existing season. Suppose to receive []
-    :return:
+    """Check that a non-existing season returns [] for regular season and playoffs.
+
+    :param fetch_season_fn: Function to test
+    :type fetch_season_fn: callable
+    :return: None
     """
     calls = []  # list for requested game_id
 
     # Fake fetch_game because we want to test fetch_season and not receive errors from real fetch_game
     def fake_fetch_game(game_id, cache_dir):
         calls.append(game_id)
-        raise _http_error(404)
+        raise http_error(404)
 
     with TemporaryDirectory() as temp_dir:
-        # Fonction by Claude to replace real fetch_game by fake on in fetch_season
+        # Code by source 3 to replace the real fetch_game by the fake one in fetch_season
         with patch.dict(
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
@@ -287,10 +368,11 @@ def check_unexisting_season(fetch_season_fn):
 
 
 def check_game_in_cache(fetch_season_fn):
-    """Test to see if season with games already in cache request for said games or not. Should use game in cache and
-    not request API.
+    """Integration test with the real fetch_game: cached games are not requested again.
 
-    :return:
+    :param fetch_season_fn: Function to test
+    :type fetch_season_fn: callable
+    :return: None
     """
     cached = [2016020001, 2016020002]
     url = "https://api-web.nhle.com/v1/gamecenter/2016020003/play-by-play"
@@ -305,7 +387,7 @@ def check_game_in_cache(fetch_season_fn):
             )
         # Fake server response with mock
         fake_response = Mock()
-        fake_response.raise_for_status.side_effect = _http_error(404)
+        fake_response.raise_for_status.side_effect = http_error(404)
         with patch("requests.get", return_value=fake_response) as get:
             result = fetch_season_fn(2016, 2, folder)
 
@@ -316,21 +398,33 @@ def check_game_in_cache(fetch_season_fn):
         ids = [g["id"] for g in result]
         assert ids == cached, f"Expected the 2 cached games {cached}, got: {ids}"
 
-def run_tests(fetch_fn, game_id, game):
-    """Run all 4 tests on fecth_fn and return results for each test. lambda idea comes from Claude
+def run_tests(fetch_fn, game_id, game, cache_file=lambda folder, gid: folder / f"{gid}.json"):
+    """Run the 4 game tests on fetch_fn.
 
-    :param fetch_fn:
-    :param game_id:
-    :param game:
-    :return:
+    :param fetch_fn: Function to test
+    :type fetch_fn: callable
+    :param game_id: Game id
+    :type game_id: int
+    :param game: Reference game
+    :type game: dict
+    :param cache_file: Cache path builder, different for William
+    :type cache_file: callable
+    :return: {test name: status}
+    :rtype: dict
     """
-    # On fait un dictionnaire pour pouvoir parcourir nos fonctions
-    # lambda permet de créer une fonction sans non ni paramètre qui va exécuter la fonction quand elle sera appelé
+    # Dictionary so we can loop over our functions. lambda idea comes from source 3
+    # lambda creates a function without name or parameter that runs the test when it is called
     test = {
-        "1. Known game": lambda: check_download(fetch_fn, game_id, game),
-        "2. Cache check": lambda: check_cache_no_request(fetch_fn, game_id, game),
-        "3. Failed HTTP request": lambda: check_failed_request(fetch_fn, game_id),
-        "4. Wrong game in cache": lambda: check_wrong_cache(fetch_fn, game_id, game),
+        "1. Known game": lambda: check_download(fetch_fn, game_id, game, cache_file),
+        "2. Cache check": lambda: check_cache_no_request(
+            fetch_fn, game_id, game, cache_file
+        ),
+        "3. Failed HTTP request": lambda: check_failed_request(
+            fetch_fn, game_id, cache_file
+        ),
+        "4. Wrong game in cache": lambda: check_wrong_cache(
+            fetch_fn, game_id, game
+        ),
     }
     results = {}
     for name, test in test.items():
@@ -338,16 +432,20 @@ def run_tests(fetch_fn, game_id, game):
             test()  # Test function is run
             results[name] = "OK"
         except AssertionError as e:  # If test function failed. Before Exception because assertion is exception
-            results[name] = f"ÉCHEC : {e}"
-        except Exception as e:  # Recommended by Claude, allows error identification other than my Assert
+            results[name] = f"FAIL : {e}"
+        except Exception as e:  # Recommended by CLAUDE, allows error identification other than my Assert
             results[name] = (
-                f"ERREUR : {type(e).__name__}: {e}"  # Prints the Exception type
+                f"ERROR : {type(e).__name__}: {e}"  # Prints the Exception type
             )
     return results
 
 def run_season_tests(fetch_season_fn):
-    """Run the 5 season tests on fetch_season_fn and return results for each test.
-    Same structure as run_tests.
+    """Run the 5 season tests on fetch_season_fn. Same structure as run_tests.
+
+    :param fetch_season_fn: Function to test
+    :type fetch_season_fn: callable
+    :return: {test name: status}
+    :rtype: dict
     """
     tests = {
         "1. Regular season stops at first 404": lambda: check_season_download(fetch_season_fn),
@@ -362,7 +460,7 @@ def run_season_tests(fetch_season_fn):
             test()
             results[name] = "OK"
         except AssertionError as e:
-            results[name] = f"ÉCHEC : {e}"
+            results[name] = f"FAIL : {e}"
         except Exception as e:
-            results[name] = f"ERREUR : {type(e).__name__}: {e}"
+            results[name] = f"ERROR : {type(e).__name__}: {e}"
     return results

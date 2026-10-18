@@ -1,17 +1,14 @@
 """
-Ensemble de fonctions d'appel simple pour gérer le modèle. Configuré pour Qwen3-4B-Instruct-2507.
+Set of simple helper functions to load, query and free the model. Configured for Qwen3-4B-Instruct-2507.
 
-Code en partie dérivé de la démo 2 du cours IFT 6758 et du site web Hugging Face
+Code partly derived from demo 2 of the IFT 6758 course and from the Hugging Face website.
+
 Source 1: milarobotlearningcourse/data_science, demo_2/notebooks/fr/04_llm_and_rag.ipynb, commit eb3dce5 (2026-09-29)
 Source 2: https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507, Qwen3-4B-Instruct-2507 Quickstart
-Source 3: https://huggingface.co/learn/cookbook/advanced_rag, Hugging face documentation
-
-
-
-
+Source 3: https://huggingface.co/learn/cookbook/advanced_rag, Hugging Face cookbook (Advanced RAG)
 """
 
-# Code tiré de la démo 2
+# Adapted from source 1 (cell 4: Python version check and imports)
 import sys
 
 if sys.version_info[:2] != (3, 11):
@@ -29,15 +26,17 @@ from ift6758.llm.qwen_log import create_log, log_call
 
 
 MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
+# Default system prompt taken from source 1 (ask_qwen, cell 6)
 DEFAULT_SYSTEM = "You are a helpful assistant."
 
 
 def pick_device():
-    """Fonction qui retourne le compute unit en fonction de la configuration du système
+    """Return the available compute unit (cuda > mps > cpu).
 
-    :return: Compute unit
+    :return: "cuda", "mps" or "cpu"
+    :rtype: str
     """
-    # Ligne 33 à 38 adapté de source 1
+    # Adapted from source 1 (cell 6), rewritten as an if/elif/else
     if torch.cuda.is_available():
         return "cuda"
     elif torch.backends.mps.is_available():
@@ -47,11 +46,11 @@ def pick_device():
 
 
 def check_env():
-    """Fonction qui permet d'aficher la configuration du système utilisé.
+    """Print the library versions and the GPU in use.
 
     :return: None
     """
-    # Ligne 46 à 55 tiré de source 1
+    # Taken from source 1 (cell 4)
     print("Python:", sys.version.split()[0])
     print("NumPy:", np.__version__, "| pandas:", pd.__version__)
     print("Transformers:", version("transformers"))
@@ -64,37 +63,47 @@ def check_env():
     )
 
 
-# Code adapté de source 1 et 2.
-# Ligne 71,
 def load_qwen(model_id=MODEL_ID, device=None):
-    """Fonction qui charge le modèle et qui retourne
+    """Load the model and tokenizer (float16 on GPU, float32 on CPU).
 
-    :param model_id: Adresse du modèle (Voir hugging Face)
+    :param model_id: Hugging Face model id
     :type model_id: str
-    :param device: Compute unit (dafault to None)
-    :type device: str
-    :rtype:
-    :return:  Modèle chargé en mémoire, tokenizer, compute unit used
+    :param device: Compute unit, picked automatically if None
+    :type device: str or None
+    :return: model, tokenizer, device
+    :rtype: tuple
     """
+    # Adapted from source 1 (cell 6) and source 2 (Quickstart)
     device = pick_device() if device is None else device
     tokenizer = AutoTokenizer.from_pretrained(model_id)
-    # Je garde la version de la démo 2 pour la compatibilité
+    # Same dtype choice as demo 2, for compatibility across team machines
     model_options = {"dtype": torch.float32 if device == "cpu" else torch.float16}
     if device == "cuda":
         model_options["device_map"] = "auto"
     model = AutoModelForCausalLM.from_pretrained(
         model_id, **model_options
-    )  # On ajoute l'option pour la compatibilité
-    # Si le modèle est sur cuda, le modèle est déjà placé, sinon on dépalce
+    )  # Options added for compatibility
+    # On CUDA the model is already placed by device_map, otherwise move it
     if device != "cuda":
         model = model.to(device)
-    # Ici je coupe le code de la démo 2 car MORE DATA Baby. Je veux connaitre le nombre exact de token dans le log.
+    # Demo 2 code stops here: no transformers pipeline, so generate() can count the exact number of tokens for the log
     return model, tokenizer, device
 
 
 def build_messages(prompt, context=None, system=None):
-    system = system or DEFAULT_SYSTEM  # Si système vide, utilise default
-    # https://huggingface.co/learn/cookbook/advanced_rag pour les instructions et structure
+    """Build the system + user messages, with the optional context added before the prompt.
+
+    :param prompt: User message
+    :type prompt: str
+    :param context: RAG context
+    :type context: str or None
+    :param system: System prompt, DEFAULT_SYSTEM if None
+    :type system: str or None
+    :return: Chat messages
+    :rtype: list[dict]
+    """
+    system = system or DEFAULT_SYSTEM  # If system is empty, use the default
+    # Prompt structure and instructions adapted from source 3
     question = (
         "".join(
             f"<context>{context}</context>\n"
@@ -103,6 +112,7 @@ def build_messages(prompt, context=None, system=None):
         if context
         else prompt
     )
+    # Message format taken from source 1 (ask_qwen, cell 6)
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": question},
@@ -111,16 +121,20 @@ def build_messages(prompt, context=None, system=None):
 
 
 def generate(model, tokenizer, messages, max_new_tokens=512, do_sample=False):
-    """
+    """Generate the answer and count the tokens in and out.
 
-    :param model:
-    :param tokenizer:
-    :param messages:
-    :param max_new_tokens:
-    :param do_sample:
-    :return:
+    :param model: Loaded model
+    :param tokenizer: Model tokenizer
+    :param messages: Chat messages
+    :type messages: list[dict]
+    :param max_new_tokens: Max tokens to generate
+    :type max_new_tokens: int
+    :param do_sample: False for reproducibility (greedy)
+    :type do_sample: bool
+    :return: prompt, answer, token counts, duration and parameters
+    :rtype: dict
     """
-    # https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
+    # Adapted from source 2 (Quickstart)
     prompt_text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
@@ -128,16 +142,16 @@ def generate(model, tokenizer, messages, max_new_tokens=512, do_sample=False):
 
     n_token_in = model_inputs["input_ids"].shape[
         1
-    ]  # On compte les token en entrée (format input_id = (1,n))
-    t0 = time.perf_counter()  # Timer pour la durée de cogitation du modèle
-    # Démo et https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
+    ]  # Count the input tokens (input_ids has shape (1, n))
+    t0 = time.perf_counter()  # Timer for the model's generation time
+    # Adapted from source 1 (cell 6, generation parameters) and source 2 (Quickstart)
     generated = model.generate(
         **model_inputs,
         max_new_tokens=max_new_tokens,
         do_sample=do_sample,
         pad_token_id=tokenizer.eos_token_id,
-    )  # Generated (1,n_token_in+n_token_out)
-    out = generated[0][n_token_in:]  # uut a le format (n_token_out,)
+    )  # generated has shape (1, n_token_in + n_token_out)
+    out = generated[0][n_token_in:]  # out has shape (n_token_out,)
     duration_s = time.perf_counter() - t0
     n_token_out = len(out)
     content = tokenizer.decode(out, skip_special_tokens=True).strip()
@@ -153,11 +167,9 @@ def generate(model, tokenizer, messages, max_new_tokens=512, do_sample=False):
 
 
 def free_qwen(device):
-    """Fonction qui vide le cache du bon device. Doit suivre un delete du model et du tokenizer sinon la mémoire ne
-    se videra pas. Tant que l'objet n'est pas vide, on ne peut pas le supprimer.
+    """Empty the device cache. Call after ``del model, tokenizer``.
 
-
-    :param device:
+    :param device: Compute unit
     :type device: str
     :return: None
     """
@@ -167,16 +179,26 @@ def free_qwen(device):
     )
 
 def ask_qwen(model, tokenizer, log_path, prompt, context, profile, extra=None):
-    """Sends a prompt to Qwen with PROFILES, logs answer and displays it.
+    """Send a prompt to Qwen with a profile, log the call and print the answer.
 
-    :param prompt: users message
-    :param context: RAG or None
-    :param profile_name: PROFILES key ("gen_code", "refine", ...)
-    :param extra: log info (iteration, task_version, ...)
-    :return:
+    :param model: Loaded model
+    :param tokenizer: Model tokenizer
+    :param log_path: JSONL log file
+    :type log_path: Path or str
+    :param prompt: User message
+    :type prompt: str
+    :param context: RAG context
+    :type context: str or None
+    :param profile: Entry of PROFILES
+    :type profile: dict
+    :param extra: Extra info to log
+    :type extra: dict or None
+    :return: Output of generate()
+    :rtype: dict
     """
     p = profile
     messages = build_messages(prompt, context, system=p["system"])
+    # Generate answer
     result = generate(
         model,
         tokenizer,
@@ -184,6 +206,7 @@ def ask_qwen(model, tokenizer, log_path, prompt, context, profile, extra=None):
         max_new_tokens=p["max_new_tokens"],
         do_sample=p["do_sample"],
     )
+    # logs results
     log_call(
         log_path,
         messages,
@@ -193,7 +216,7 @@ def ask_qwen(model, tokenizer, log_path, prompt, context, profile, extra=None):
             "profile_version": p["version"],
             "max_new_tokens": p["max_new_tokens"],
             "do_sample": p["do_sample"],
-            "context_format": "v5",
+            "context_format": "v5", # Need to implement a incrementation method
             **(extra or {}),
         },
     )
@@ -201,8 +224,7 @@ def ask_qwen(model, tokenizer, log_path, prompt, context, profile, extra=None):
     print(
         f"\n{result['n_token_in']} tokens in, {result['n_token_out']} generated, {result['duration_s']:.1f} s"
     )
-    # Check if we go over max_new_token
+    # Check if we reach max_new_tokens
     if result["n_token_out"] >= p["max_new_tokens"]:
-        print("max_new_tokens exceeded : troncated output")
+        print("max_new_tokens reached: truncated output")
     return result
-    

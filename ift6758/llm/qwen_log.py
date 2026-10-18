@@ -1,3 +1,7 @@
+"""
+Logging of the Qwen calls: one JSONL file per session, one line per call.
+"""
+
 from pathlib import Path
 import json
 from datetime import datetime
@@ -7,27 +11,32 @@ LOGS_DIR = (
 )
 
 def create_log(log_dir=LOGS_DIR):
-    """Fonction qui génère un nouveau fichier pour enregistrer les logs et retourne le chemin vers ce fichier
-    :param log_dir: le dossier, LOGS_DIR par defaut
-    :type log_dir: Path ou str
-    :return: Path of log file
+    """Create the log folder if needed and return the path of a new timestamped log file.
+
+    :param log_dir: Log folder
+    :type log_dir: Path or str
+    :return: Path of the log file
     :rtype: Path
     """
     nom = (
         "chat_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jsonl"
-    )  # le jsonl permet d'ajouter une nouvelle ligen sans refaire tou le json
+    )  # JSONL lets us append a new line without rewriting the whole JSON
     path = Path(Path(log_dir) / nom)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
 def log_call(log_path, messages, result, extra=None):
-    """Fonction qui enregistre les informations d'une conversation dans un fichier jsonL.
+    """Append one call (messages, result, tokens/s and extra info) to the JSONL log.
 
-    :param log_path:
-    :param messages:
-    :param result:
-    :param extra:
+    :param log_path: Log file from create_log
+    :type log_path: Path or str
+    :param messages: Messages sent to the model
+    :type messages: list[dict]
+    :param result: Output of generate()
+    :type result: dict
+    :param extra: Extra info to log
+    :type extra: dict or None
     :return: None
     """
 
@@ -42,8 +51,8 @@ def log_call(log_path, messages, result, extra=None):
         "messages": messages,
         "tokens_per_s": tokens_per_s,
     }
-    record = {**record, **result, **extra}  # ** permet d'unpack les dictonnaires
+    record = {**record, **result, **extra}  # ** unpacks the dictionaries
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(
             json.dumps(record, ensure_ascii=False) + "\n"
-        )  # ensure_ascii permet les accents éèà
+        )  # ensure_ascii=False keeps accents (éèà) readable
