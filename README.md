@@ -3,6 +3,7 @@
 Make sure to set up the environment before starting
 
     uv sync
+    uv sync --all-extras
 
 ## 1\. Data Acquisition
 
