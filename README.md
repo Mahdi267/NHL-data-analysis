@@ -1,4 +1,4 @@
-# HOW TO PROPERLY USE OUR CODE (MANUAL SECTION, LLM SECTION NOT INCLUDED)
+# How to use our code (manual section, LLM not included)
 
 Make sure to set up the environment before starting
 
@@ -12,7 +12,9 @@ You can download data from NHL play-by-play API for a particular season by creat
 an object from class "NHLyear" with parameters for the year the season starts and 
 the path to the folder you want to save the data.
 
-Here's an example for season:
+In our implementation, the json files are saved in "ift6758\notebooks\data\raw".
+
+Here's an example for a season:
 
 ``` python
 # Example of the class being used:
@@ -26,13 +28,11 @@ before continuing.
 A more detailed turorial for the data acquisition is available in our blog post
 "2026-10-19-milestone-1.md".
 
-In our implementation, the json files are saved in "ift6758\notebooks\data\raw".
-
 ## 2\. Interactive Debugging Tool
 
 The code for this task is in "ift6758\notebooks\ipywidgets.ipynb".
 
-Run each cell in order. When the ipywidgets are running, you can select the season, 
+Run each cell in order. With the ipywidgets, you can select the season, 
 match type, game id and event id of your choice. The code will return information 
 about the game, the coordinates of the event on the skating rink image and information 
 about the event.
@@ -49,7 +49,7 @@ You can use the function "json2tidy" in a notebook or python file by importing i
 from ift6758.features.tidy import json2tidy
 ```
 
-Then, to convert a raw NHL play-by-play JSON data into a tidy DataFrame, you parse
+Then, to convert a raw NHL play-by-play JSON data into a tidy DataFrame, you pass
 the path of the json file containing the data.
 
 For example:
@@ -71,3 +71,4 @@ For this part, you just need to run the cells in order.
 ## 5\. Advanced Visualisations
 
 The code for this task is in "ift6758\visualizations\shot_maps.ipynb"
+
