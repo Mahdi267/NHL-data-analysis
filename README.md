@@ -13,9 +13,9 @@ You can download data from NHL play-by-play API for a particular season by creat
 an object from class "NHLyear" with parameters for the year the season starts and 
 the path to the folder you want to save the data.
 
-In our implementation, the json files are saved in "ift6758\notebooks\data\raw".
+In our implementation, the json files are saved in "ift6758\data".
 
-Here's an example for a season:
+Here's an example for a season (this cell is in "ift6758/notebooks/raw_data_acquisition.ipynb"):
 
 ``` python
 # Example of the class being used:
