@@ -4,6 +4,7 @@
 # https://www.youtube.com/watch?v=YZp9hxwP7R4&t=21s
 
 import pandas as pd
+import numpy as np
 import json
 
 
@@ -81,7 +82,7 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
         df_data["homeTeam_name"] = df_data["homeTeam.placeName.default"] + " " + df_data["homeTeam.commonName.default"]
         df_data["awayTeam_name"] = df_data["awayTeam.placeName.default"] + " " + df_data["awayTeam.commonName.default"]
         
-        df_data.loc[:, [
+        df_data = df_data.loc[:, [
             "id",
             "gameType",
             "season",
@@ -153,7 +154,7 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
 
     # Merge name information for each type of action
 
-    # Shooters name
+    # Shooters name (shooter and scorer name merged)
     df_merged_name_play_shooter = pd.merge(
         df_filtered_info,
         df_name_data,
@@ -170,26 +171,9 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
         columns=["playerId"]
     )
 
-    # Scorers name
-    df_merged_name_play_scorer = pd.merge(
-        df_merged_name_play_shooter,
-        df_name_data,
-        left_on="details.scoringPlayerId",
-        right_on="playerId",
-        how="left"
-    ).rename(columns={
-        "firstName.default": "scorerName",
-        "lastName.default": "scorerLastName"
-    })
-
-    # Remove the player ID used for the second merge
-    df_merged_name_play_scorer = df_merged_name_play_scorer.drop(
-        columns=["playerId"]
-    )
-
     # Goalies name
     df_merged_name_play = pd.merge(
-        df_merged_name_play_scorer,
+        df_merged_name_play_shooter,
         df_name_data,
         left_on="details.goalieInNetId",
         right_on="playerId",
@@ -199,7 +183,7 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
         "lastName.default": "goalieLastName"
     })
 
-    # Remove the player ID used for the third merge
+    # Remove the player ID used for the second merge
     df_merged_name_play = df_merged_name_play.drop(
         columns=["playerId"]
     )
@@ -291,11 +275,40 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
         "strength"
     ] = "shorthanded"
 
-    # Drop all unecessary colomns
-    df_merged_name_play.drop(columns=["scorerName", "scorerLastName"], inplace=True)
+    # Determine the homeTeamDefendingSide for the 2018 season and previous seasons
+    # LOGIC FROM GEMINI
+    # Asked Gemini for this part to handle a season-specific edge case for older data
+    
+    # Make the homeTeamDefendingSide column text before filling it
+    df_merged_name_play["homeTeamDefendingSide"] = df_merged_name_play["homeTeamDefendingSide"].astype(object)
+    column_nan = df_merged_name_play["homeTeamDefendingSide"].isna()
 
-    # Rename names colums
-    df_merged_name_play.rename(columns={"shooterName": "player_name", "shooterLastName": "player_last_name"})
+    if column_nan.any():
+        # First period shots
+        p1_shots = df_merged_name_play[
+            (df_merged_name_play["periodDescriptor.number"] == 1)
+            & (df_merged_name_play["details.eventOwnerTeamId"] == df_merged_name_play["homeTeam.id"])
+            & (df_merged_name_play["details.xCoord"].notna())
+        ]
+
+        # Calculate the median to guess wich side was attacked
+        median_x_coord = p1_shots.groupby("id")["details.xCoord"].median()
+
+        # If median > 0, attack to the right, else to the left
+        probable_home_side = median_x_coord.apply(
+            lambda x: "left" if x > 0 else "right"
+        )
+
+        # Fill the column
+        df_merged_name_play.loc[column_nan, "homeTeamDefendingSide"] = df_merged_name_play.loc[
+            column_nan, "id"
+        ].map(probable_home_side)
+
+        # Manage the change of ends each period
+        changing_side = column_nan & ((df_merged_name_play["periodDescriptor.number"] % 2) == 0)
+        df_merged_name_play.loc[changing_side, "homeTeamDefendingSide"] = df_merged_name_play.loc[
+            changing_side, "homeTeamDefendingSide"
+        ].map({"left": "right", "right": "left"})
 
     # Rename columns to make the dataframe easier to read
     df_merged_name_play = df_merged_name_play.rename(columns={
@@ -321,6 +334,3 @@ def json2tidy(raw_data:str | dict, events:bool) -> pd.DataFrame:
     })
 
     return df_merged_name_play
-    
-if __name__ == "__main__":
-    print(json2tidy("ift6758/notebooks/data/raw/2022/2022020001.json")["strength"])
