@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pandas as pd
 
-RAW_DIR = Path("../data")
-GAME_FILE = RAW_DIR / "2022030411.json"
+RAW_DIR = Path(__file__).resolve().parents[1] / "data"
+GAME_FILE = RAW_DIR / "2022" / "2022030411.json"
 COLUMNS = ["game_id", "event_id", "season", "game_type", "period", "time", "team_id",
            "event_type", "x_coord", "y_coord", "shooter", "goalie", "shot_type",
            "empty_net", "strength"]
