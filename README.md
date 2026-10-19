@@ -73,3 +73,5 @@ For this part, you just need to run the cells in order.
 
 The code for this task is in "ift6758\visualizations\shot_maps.ipynb"
 
+For this part, you just need to run the cells in order.
+
