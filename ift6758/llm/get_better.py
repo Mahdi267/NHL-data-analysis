@@ -91,12 +91,12 @@ def build_refine_prompt(task, code, context, report):
     parts = [
         f"Here is the original task prompt.\n<task>{task}</task>",
         f"Here is the code generated from this task prompt.\n<generated_code>{code}</generated_code>",
-        f"Here are the results of the tests run on this code.\n<test_results>{report}</test_results>",
         f"Here is the official API documentation.\n<context>{context}</context>",
+        f"Here are the results of the tests run on this code.\n<test_results>{report}</test_results>",
         "Rewrite the task prompt so that the code generated from it passes all the tests. "
         "Keep every requirement of the original task prompt. "
         "Do not write any code. "
-        "Return only the new task prompt inside <new_prompt></new_prompt> tags."
+        "Return only the new task prompt inside <new_prompt></new_prompt> tags.",
     ]
     return "\n\n".join(parts)
 
