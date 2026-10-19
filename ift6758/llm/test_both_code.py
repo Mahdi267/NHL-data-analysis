@@ -243,7 +243,7 @@ def check_playoff_structure(fetch_season_fn):
     :return: None
     """
     matchups = {1: 8, 2: 4, 3: 2, 4: 1}
-    # Match in fake serie with proper matchup structure. Fake match was made by source 3 for accuracy
+    # Match in fake serie with proper matchup structure. Fake match was made by CLAUDE for accuracy
     existing = [
         2016030111,
         2016030121,
@@ -273,7 +273,7 @@ def check_playoff_structure(fetch_season_fn):
         raise http_error(404)
 
     with TemporaryDirectory() as temp_dir:
-        # Code by source 3 to replace the real fetch_game by the fake one in fetch_season
+        # Code by CLAUDE to replace the real fetch_game by the fake one in fetch_season
         with patch.dict(
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
@@ -312,7 +312,7 @@ def check_error_prop(fetch_season_fn):
         raise http_error(500)
 
     with TemporaryDirectory() as temp_dir:
-        # Code by source 3 to replace the real fetch_game by the fake one in fetch_season
+        # Code by CLAUDE to replace the real fetch_game by the fake one in fetch_season
         with patch.dict(
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
@@ -347,7 +347,7 @@ def check_unexisting_season(fetch_season_fn):
         raise http_error(404)
 
     with TemporaryDirectory() as temp_dir:
-        # Code by source 3 to replace the real fetch_game by the fake one in fetch_season
+        # Code by CLAUDE to replace the real fetch_game by the fake one in fetch_season
         with patch.dict(
             fetch_season_fn.__globals__, {"fetch_game_llm": fake_fetch_game}
         ):
@@ -412,7 +412,7 @@ def run_tests(fetch_fn, game_id, game, cache_file=lambda folder, gid: folder / f
     :return: {test name: status}
     :rtype: dict
     """
-    # Dictionary so we can loop over our functions. lambda idea comes from source 3
+    # Dictionary so we can loop over our functions. lambda idea comes from CLAUDE
     # lambda creates a function without name or parameter that runs the test when it is called
     test = {
         "1. Known game": lambda: check_download(fetch_fn, game_id, game, cache_file),
