@@ -19,7 +19,7 @@ Here's an example for a season:
 
 ``` python
 # Example of the class being used:
-yr2020 = NHLyear(2020, "data/raw")  # Creation of the object
+yr2020 = NHLyear(2020, "../data")  # Creation of the object
 yr2020.download_all()  # downloads all the games found
 ```
 
@@ -56,7 +56,7 @@ the path of the json file containing the data.
 For example:
 
 ``` python
-json2tidy("ift6758/notebooks/data/raw/2022/2022020001.json")
+json2tidy("ift6758/data/2022/2022020001.json")
 ```
 
 ## 4\. Simple Visualisations

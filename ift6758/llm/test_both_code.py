@@ -13,7 +13,8 @@ from pathlib import Path
 
 import requests
 
-DOCS_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
+# DOCS_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
+DOCS_DIR = Path("../data")
 
 # This translation layer was made by CLAUDE
 def make_william_fetch(nhl_year_class):
@@ -77,7 +78,7 @@ def check_download(fetch_fn, game_id, game, cache_file=lambda folder, gid: folde
     filename = f"{game_id}.json"
     # Temporary folder to force a download
     with TemporaryDirectory() as temp_dir:
-        folder = Path(temp_dir) / "raw"
+        folder = Path(temp_dir) / str(game_id)[:4]
         # Fake API response with Mock
         fake_response = Mock()
         fake_response.json.return_value = game
@@ -106,7 +107,7 @@ def check_cache_no_request(fetch_fn, game_id, game, cache_file=lambda folder, gi
     """
     # Adapted from source 1 (cell 22)
     with TemporaryDirectory() as temp_dir:
-        folder = Path(temp_dir) / "raw"
+        folder = Path(temp_dir) / str(game_id)[:4]
         # Create the cache folder (parents=True also creates William's <year> subfolder)
         cache_file(folder, game_id).parent.mkdir(parents=True, exist_ok=True)  # William
         # Fill the cache ourselves before the call
@@ -136,7 +137,7 @@ def check_failed_request(fetch_fn, game_id, cache_file=lambda folder, gid: folde
     """
     # Case suggested by source 1 (cell 23)
     with TemporaryDirectory() as temp_dir:
-        folder = Path(temp_dir) / "raw"
+        folder = Path(temp_dir) / str(game_id)[:4]
         # Fake API response with Mock
         fake_response = Mock()
         fake_response.status_code = 404  # William : reads status_code instead of raise_for_status
@@ -174,7 +175,7 @@ def check_wrong_cache(fetch_fn, game_id, game):
     # Case suggested by source 1 (cell 23)
     other_id = game_id + 1
     with TemporaryDirectory() as temp_dir:
-        folder = Path(temp_dir) / "raw"
+        folder = Path(temp_dir) / str(game_id)[:4]
         folder.mkdir()
         # Fill the cache ourselves with game_id under the wrong name other_id
         (folder / f"{other_id}.json").write_text(json.dumps(game), encoding="utf-8")
@@ -378,7 +379,7 @@ def check_game_in_cache(fetch_season_fn):
     url = "https://api-web.nhle.com/v1/gamecenter/2016020003/play-by-play"
 
     with TemporaryDirectory() as temp_dir:
-        folder = Path(temp_dir) / "raw"
+        folder = Path(temp_dir) / str(game_id)[:4]
         folder.mkdir()
         # we fill cache with 2 valid match
         for game_id in cached:

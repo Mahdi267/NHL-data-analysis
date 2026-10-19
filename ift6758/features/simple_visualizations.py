@@ -12,7 +12,7 @@ def games_ids(season):
             Season (int) : Season to take the games from
 
     """
-    pathlist = Path(f"../notebooks/data/raw/{season}")
+    pathlist = Path(f"../data/{season}")
     return [p.stem for p in pathlist.glob("*.json")]
 
 def games_list(season, events=True) -> pd.DataFrame:
@@ -28,7 +28,7 @@ def games_list(season, events=True) -> pd.DataFrame:
     df_games_list = []
 
     for game_id in games_ids(season):
-        df = json2tidy(f"../notebooks/data/raw/{season}/{game_id}.json", events)
+        df = json2tidy(f"../data/{season}/{game_id}.json", events)
         df_games_list.append(df)
 
     merged_df_regular = pd.concat(df_games_list, ignore_index=True)
