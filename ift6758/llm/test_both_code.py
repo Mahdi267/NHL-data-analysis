@@ -161,7 +161,7 @@ def check_failed_request(fetch_fn, game_id, cache_file=lambda folder, gid: folde
         )
 
 
-def check_wrong_cache(fetch_fn, game_id, game):
+def check_wrong_cache(fetch_fn, game_id, game, cache_file=lambda folder, gid: folder / f"{gid}.json"):
     """Test 4 (BONUS): the cached game is the wrong one, so a ValueError is raised.
 
     :param fetch_fn: Function to test
@@ -170,15 +170,17 @@ def check_wrong_cache(fetch_fn, game_id, game):
     :type game_id: int
     :param game: Reference game
     :type game: dict
+    :param cache_file: Cache path builder, different for William
+    :type cache_file: callable
     :return: None
     """
     # Case suggested by source 1 (cell 23)
     other_id = game_id + 1
     with TemporaryDirectory() as temp_dir:
         folder = Path(temp_dir) / str(game_id)[:4]
-        folder.mkdir()
+        cache_file(folder, other_id).parent.mkdir(parents=True, exist_ok=True)
         # Fill the cache ourselves with game_id under the wrong name other_id
-        (folder / f"{other_id}.json").write_text(json.dumps(game), encoding="utf-8")
+        cache_file(folder, other_id).write_text(json.dumps(game), encoding="utf-8")
         with patch(
             "requests.get",
             side_effect=AssertionError("Request sent without name error flag"),
@@ -379,7 +381,7 @@ def check_game_in_cache(fetch_season_fn):
     url = "https://api-web.nhle.com/v1/gamecenter/2016020003/play-by-play"
 
     with TemporaryDirectory() as temp_dir:
-        folder = Path(temp_dir) / str(game_id)[:4]
+        folder = Path(temp_dir) / "2016"
         folder.mkdir()
         # we fill cache with 2 valid match
         for game_id in cached:
@@ -424,7 +426,7 @@ def run_tests(fetch_fn, game_id, game, cache_file=lambda folder, gid: folder / f
             fetch_fn, game_id, cache_file
         ),
         "4. Wrong game in cache": lambda: check_wrong_cache(
-            fetch_fn, game_id, game
+            fetch_fn, game_id, game, cache_file
         ),
     }
     results = {}
