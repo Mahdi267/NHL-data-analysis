@@ -143,3 +143,8 @@ dmypy.json
 # Ruff
 .ruff_cache/
 /ift6758/notebooks/test.ipynb
+
+models/
+wandb/
+*.joblib
+ift6758/data/features/
