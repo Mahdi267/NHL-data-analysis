@@ -143,6 +143,7 @@ dmypy.json
 # Ruff
 .ruff_cache/
 /ift6758/notebooks/test.ipynb
+/ift6758/visualizations/HomeTeamDefendingSide_estimation.ipynb
 
 models/
 wandb/
