@@ -1,7 +1,8 @@
 """
 Raw data extraction (code gathered from milestone 1 notebook and functions for ease of use).
 
-Source: Milestone 1, William Perktold, ift6758/notebooks/raw_data_acquisition.ipynb
+Source 1: Milestone 1, William Perktold, ift6758/notebooks/raw_data_acquisition.ipynb
+Source 2: Milestone 1, William Perktold, games_ids and games_list, ift6758/features/simple_visualizations.py
 """
 import json
 from pathlib import Path
@@ -15,6 +16,7 @@ from ift6758.features.tidy import json2tidy
 # AI solution to assure the following functions work from any directory 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
+# Source 1
 # Code by William Perktold
 # uses some code from Demo 2
 class NHLyear:
@@ -27,6 +29,7 @@ class NHLyear:
         self.year = str(year)
         self.filepath = filepath
 
+    # Source 1
     def download(self, game_id, dir_path, verbose=False):
         """
         Includes code copied from demo 1
@@ -75,6 +78,7 @@ class NHLyear:
 
         return response.status_code, downloaded_game
 
+    # Source 1
     def download_all(self):
         """
         Downloads all matches from that year (regular season and playoffs). This will usually take several minutes
@@ -116,6 +120,7 @@ class NHLyear:
 
         print(f"Downloaded {n} playoff games.")
 
+    # Source 1
     def game(self, game_id, dir_path = DATA_DIR):
         """
         Function to download and return only one game. Doesn't save to the game_list. Works even without download_all() being called first.
@@ -136,7 +141,7 @@ class NHLyear:
         if str(status_code) == "200":
             return loaded_game
         return status_code
-
+# Source 1
 def multi_year(start_year, end_year):
     """
     Download several consecutive years.
@@ -151,5 +156,39 @@ def multi_year(start_year, end_year):
         year += 1
 
 
+# Source 2, with new varaible path
+#Functions used for Task 3: Simple visualizations
+def games_ids(season,data_dir: Path = DATA_DIR, game_type: str = "02"):
+    """
+    Return in a list all the game ids for the season.
 
+    Parameters:
+            season (int) : Season to take the games from
+            data_dir (Path) : Path to take season from
+            game_type (str) : "02" for regular season or "03" for series
 
+    """
+
+    return [p.stem for p in Path(data_dir, str(season)).glob(f"{season}{game_type}*.json")]
+# Source 2, with new variable data_dir for Path
+def games_list(season, events=True, data_dir: Path = DATA_DIR, game_type: str = "02") -> pd.DataFrame:
+    """
+    Function to put all the games dataframe for a season in a list and merge them into one dataframe.
+
+    Parameters:
+        Season (int) : Season to take the games from
+        data_dir (Path) : Path to take season from
+        game_type (str) : "02" for regular season or "03" for series
+
+    Returns:
+        pd.DataFrame
+    """
+    df_games_list = []
+
+    for game_id in games_ids(season,data_dir=data_dir,game_type=game_type):
+        df = json2tidy(f"{data_dir}/{season}/{game_id}.json", events)
+        df_games_list.append(df)
+
+    merged_df = pd.concat(df_games_list, ignore_index=True)
+
+    return merged_df

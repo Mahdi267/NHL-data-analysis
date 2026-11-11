@@ -1,36 +1,48 @@
+"""
+Data engineering for Q2 and Q4.
+
+Source: Milestone 1, William Perktold, ift6758/notebooks/raw_data_acquisition.ipynb
+"""
 import json
 from pathlib import Path
-from typing import List
-
 from tqdm.auto import tqdm
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
-from ift6758.features.simple_visualizations import games_list, distance
+from ift6758.milestone2.src.data_extraction import NHLyear, DATA_DIR, games_list
 
 
 # Constants
 GOAL_X = 89  # x coordinate of the goal line (feet)
 PERIOD_SECONDS = 20 * 60  # length of a regulation period (seconds)
 SHOT_EVENTS = ["shot-on-goal", "goal"]  # events asked in README
-DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
-def create_datasets(training_year: list, test_year: list, ) -> pd.DataFrame:
-    # create training / test set (2023/24)
-    train_years = [2016, 2017, 2018, 2019, 2020, 2021, 2022]
-    test_years = [2023]
+def build_dataset_q2(seasons: list, data_dir: Path = DATA_DIR, game_type: str = "02") -> pd.DataFrame:
+    """
+    New implementation of raw_data_acquisition.ipynb from Milestone1 mixed with basic_feature_engineering.ipynb
+    Function to create dataset from selected season
+    
+    Parameters:
+        seasons (list) : List of seasons
+        data_dir (Path) : Path to take season from
+        game_type (str) : "02" for regular season or "03" for series
+        
+    Returns:
+        tidy (pd.Dataframe):
+    """
+    tidy = []
+    for season in seasons:
+        if not any(Path(data_dir, str(season)).glob(f"{season}{game_type}*.json")):
+            yr = NHLyear(season, data_dir)  # Creation of the object
+            yr.download_all()  # downloads all the games found
+        tidy.append(games_list(season,data_dir=data_dir, game_type=game_type))
 
-    # getting the games for the training ds
-    train_tidy = []
-    for year in train_years:
-        train_tidy.append(games_list(year))
+    tidy = pd.concat(tidy,ignore_index=True)
+    tidy = angles_will(tidy)
+    tidy.replace(np.inf, np.nan, inplace=True)
+    tidy.dropna(subset=["distance", "angle"], inplace=True)
+    return tidy
 
-    train_tidy = pd.concat(train_tidy)
-    train_tidy.head()
-    return train_tidy
-
-def angles(dataframe, ) -> pd.DataFrame:
+def angles_will(dataframe, ) -> pd.DataFrame:
     """
     Modified version of "distance" function from Milestone 1
     Function to add the columns distance and angle to the dataframe.
@@ -62,8 +74,6 @@ def angles(dataframe, ) -> pd.DataFrame:
 
     #calculate the distance between the x,y coordinates and the goal
     #the y coordinate for the goals is 0
-
-    #the sign depends of the side during the period e.g. goalX = -57 for left side, 57 for right side. Better of with absolute value
     dx = df["goalCoordX"]-df["x_coord"]
 
 
@@ -77,7 +87,6 @@ def angles(dataframe, ) -> pd.DataFrame:
     df = df.drop(
         columns = ["team_defending", "side_defending", "goalCoordX"]
     )
-
     return df
 
 
@@ -319,7 +328,7 @@ def last_event(dataframe: pd.DataFrame):
     return df
 
 
-def build_dataset(seasons: list[int], data_dir: Path = DEFAULT_DATA_DIR):
+def build_dataset_q4(seasons: list[int], data_dir: Path = DATA_DIR, game_type: str = "02"):
     """
     Apply the full pipeline to every regular season game of the given seasons.
 
@@ -332,10 +341,12 @@ def build_dataset(seasons: list[int], data_dir: Path = DEFAULT_DATA_DIR):
     """
     frames = []
     for season in seasons:
-        files = sorted(Path(data_dir, str(season)).glob(f"{season}02*.json"))
+        # Evolution of
+        files = sorted(Path(data_dir, str(season)).glob(f"{season}{game_type}*.json"))
         for path in tqdm(files, desc=str(season)):
             with open(path, encoding="utf-8") as f:
                 events = game_to_events(json.load(f))
             frames.append(filter_shots(events))
+    # ignore_index = True allows to not repeat index for every season. 
     dataset = pd.concat(frames, ignore_index=True)
     return dataset
