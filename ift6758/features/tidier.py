@@ -54,6 +54,7 @@ def game_to_events(game: dict):
               "details.typeCode":"penalty_type",
               "details.duration":"penalty_duration"}
     df_data = (df_data.reindex(columns=new_columns.keys())).rename(columns=new_columns)
+    
     df_data = fill_home_defending_side(df_data)
     df_data = add_game_seconds(df_data)
     df_data = add_shot_geometry(df_data)
@@ -61,6 +62,7 @@ def game_to_events(game: dict):
     # Claude recommended to use both seconds AND sort_values to sort with quicksort or to use stable or mergesort as kind
     # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sort_values.html
     df_data = (df_data.sort_values(by=["game_seconds","sort_order"])).reset_index(drop=True) # To help with Q4.2
+    df_data = last_event(df_data)
 
     return df_data
 
@@ -169,6 +171,60 @@ def filter_shots(dataframe: pd.DataFrame, drop_shootout: bool = True):
 
     return data[data["event_type"].isin(SHOT_EVENTS)].reset_index(drop=True)
 
+def last_event(dataframe: pd.DataFrame):
+    """
+    Add last event information.
+
+    param:
+        dataframe (pd.DataFrame) : Events of one game
+
+    return:
+        pd.DataFrame
+    """
+    #since the data is sorted by seconds and sorted_order, I can use the index
+    df0 = dataframe.copy()
+
+    df = dataframe.copy()
+    df = df[df.index!=0]
+    #Put the first line at the end so the dataframes are the same length
+    line0 = df0[df0.index==0]
+    df = pd.concat([df,line0])
+    
+    #Last event type
+    df['last_event_type'] = df0['event_type'].values
+    df.loc[df.index==0,'last_event_type'] = ''
+
+    #Coordinates of last event
+    df['last_x_coord'] = df0['x_coord'].values
+    df.loc[df.index==0,'last_x_coord'] = None
+    df['last_y_coord'] = df0['y_coord'].values
+    df.loc[df.index==0,'last_y_coord'] = None
+
+    #Time from last event
+    df['time_from_last'] = df['game_seconds'].values - df0['game_seconds'].values
+    df.loc[df.index==0,'time_from_last'] = None
+
+    #Distance from last event
+    dx = df['x_coord'].values - df['last_x_coord'].values
+    dy = df['y_coord'].values - df['last_y_coord'].values
+    df['distance_from_last'] = np.hypot(dx,dy)
+
+    #Rebound
+    df['rebound'] = np.where(df['last_event_type']=='shot-on-goal',True,False)
+
+    #Change in shot angle
+    df['change_angle'] = np.where(df['rebound']==True,df['angle'].values-df0['angle'].values,0)
+
+    #Put the first line back on top
+    line0 = df[df.index==0]
+    df = df[df.index!=0]
+    df = pd.concat([line0,df])
+
+    #Speed
+    #When time_from_last==0, distance_from_last=NaN
+    df['speed'] = np.where(df['time_from_last']!=0, df['distance_from_last'].values / df['time_from_last'].values,df['distance_from_last'])
+
+    return df
 
 def build_dataset(seasons: list[int], data_dir: Path = DEFAULT_DATA_DIR):
     """

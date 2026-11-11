@@ -145,7 +145,6 @@ dmypy.json
 /ift6758/notebooks/test.ipynb
 /ift6758/visualizations/HomeTeamDefendingSide_estimation.ipynb
 
-models/
 wandb/
 *.joblib
 ift6758/data/features/
