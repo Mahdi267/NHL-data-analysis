@@ -79,7 +79,7 @@ def qs3_2_3(df):
         config = {
             "model": "LogisticRegression",
             "training_size": len(X_train),
-            "validation_ratio": len(X_val) / len(df),
+            "validation_ratio": VALIDATION_SIZE,
             "features": features,
             "seasons": TRAIN_SEASONS,
             "game_type": "02",  # regular season
