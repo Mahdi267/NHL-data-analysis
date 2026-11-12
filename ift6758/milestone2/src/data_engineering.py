@@ -319,10 +319,17 @@ def last_event(dataframe: pd.DataFrame):
 
     # Speed
     # When time_from_last==0, distance_from_last=NaN
-    df["speed"] = np.where(
-        df["time_from_last"] != 0,
-        df["distance_from_last"].values / df["time_from_last"].values,
-        df["distance_from_last"],
+    #df["speed"] = np.where(
+    #    df["time_from_last"] != 0,
+    #    df["distance_from_last"].values / df["time_from_last"].values,
+    #    df["distance_from_last"],
+    #)
+    # Pour éviter les messages de divisions par 0, on remplace par
+    np.divide(
+        df["distance_from_last"].values,
+        df["time_from_last"].values,
+        out=np.full_like(df["distance_from_last"].values, np.nan, dtype=float), # retourne NaN si faux
+        where=(df["time_from_last"].values != 0), # Si temps =0, pas de division
     )
 
     return df

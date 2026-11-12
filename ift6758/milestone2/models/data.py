@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from ift6758.milestone2.src.data_engineering import build_dataset_q2
+from ift6758.milestone2.src.data_engineering import build_dataset_q2, build_dataset_q4
 
 # AI solution to assure the following functions work from any directory
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -17,7 +17,7 @@ def load_features(path=FEATURES_PATH, seasons=TRAIN_SEASONS) -> pd.DataFrame:
         df = pd.read_pickle(path)
     else:
         # Build and save the dataset if it does not exist
-        df = build_dataset_q2(seasons)
+        df = build_dataset_q4(seasons)
         path.parent.mkdir(parents=True, exist_ok=True)
         df.to_pickle(path)
 
