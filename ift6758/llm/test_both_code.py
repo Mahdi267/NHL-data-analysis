@@ -48,7 +48,7 @@ def william_cache_file(folder, game_id):
     :rtype: Path
     """
     return folder / str(game_id)[:4] / f"{game_id}.json"
-
+# This function was made by CLAUDE
 def http_error(status):
     """Build an HTTPError like raise_for_status() does.
 

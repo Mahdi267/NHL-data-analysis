@@ -6,9 +6,9 @@ import pandas as pd
 
 
 # Constants
-GOAL_X = 89                                 # x coordinate of the goal line (feet)
-PERIOD_SECONDS = 20 * 60                    # length of a regulation period (seconds)
-SHOT_EVENTS = ["shot-on-goal", "goal"]      # events kept in the final dataset
+GOAL_X = 89 # x coordinate of the goal line (feet)
+PERIOD_SECONDS = 20 * 60 # length of a regulation period (seconds)
+SHOT_EVENTS = ["shot-on-goal", "goal"] # events asked in README
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
@@ -127,7 +127,7 @@ def fill_home_defending_side(dataframe: pd.DataFrame) -> pd.DataFrame:
 def add_shot_geometry(dataframe: pd.DataFrame):
     """
     Add the columns distance and angle relative to the net attacked by the event owner team.
-    Unknown defending side gives NaN (not a default side).
+    Unknown defending side gives NaN.
 
     param:
         dataframe (pd.DataFrame) : Needs x_coord, y_coord, team_id, home_team_id, home_defending_side
@@ -226,7 +226,7 @@ def last_event(dataframe: pd.DataFrame):
 
     return df
 
-def build_dataset(seasons: list[int], data_dir: Path = DEFAULT_DATA_DIR):
+def build_dataset_2(seasons: list[int], data_dir: Path = DEFAULT_DATA_DIR):
     """
     Apply the full pipeline to every regular season game of the given seasons.
 
