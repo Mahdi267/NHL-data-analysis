@@ -3,6 +3,7 @@ Data engineering for Q2 and Q4.
 
 Source: Milestone 1, William Perktold, ift6758/notebooks/raw_data_acquisition.ipynb
 """
+import wandb
 import json
 from pathlib import Path
 from tqdm.auto import tqdm
@@ -10,11 +11,13 @@ import pandas as pd
 import numpy as np
 from ift6758.milestone2.src.data_extraction import NHLyear, DATA_DIR, games_list
 
-
 # Constants
 GOAL_X = 89  # x coordinate of the goal line (feet)
 PERIOD_SECONDS = 20 * 60  # length of a regulation period (seconds)
 SHOT_EVENTS = ["shot-on-goal", "goal"]  # events asked in README
+
+WANDB_ENTITY = 'IFT6758A_2026_Team5'
+WANDB_PROJECT = 'IFT6758A_2026_05_milestone2'
 
 def build_dataset_q2(seasons: list, data_dir: Path = DATA_DIR, game_type: str = "02") -> pd.DataFrame:
     """
@@ -305,7 +308,9 @@ def last_event(dataframe: pd.DataFrame):
     df["distance_from_last"] = np.hypot(dx, dy)
 
     # Rebound
-    df["rebound"] = np.where(df["last_event_type"] == "shot-on-goal", True, False)
+    df["rebound"] = np.where(df["event_type"] == "shot-on-goal",
+                              np.where(df["last_event_type"]== "shot-on-goal", True, False), 
+                              False)
 
     # Change in shot angle
     df["change_angle"] = np.where(
@@ -325,7 +330,7 @@ def last_event(dataframe: pd.DataFrame):
     #    df["distance_from_last"],
     #)
     # Pour éviter les messages de divisions par 0, on remplace par
-    np.divide(
+    df["speed"] = np.divide(
         df["distance_from_last"].values,
         df["time_from_last"].values,
         out=np.full_like(df["distance_from_last"].values, np.nan, dtype=float), # retourne NaN si faux
@@ -353,7 +358,44 @@ def build_dataset_q4(seasons: list[int], data_dir: Path = DATA_DIR, game_type: s
         for path in tqdm(files, desc=str(season)):
             with open(path, encoding="utf-8") as f:
                 events = game_to_events(json.load(f))
-            frames.append(filter_shots(events))
+            # frames.append(filter_shots(events))
+            frames.append(events)
     # ignore_index = True allows to not repeat index for every season. 
     dataset = pd.concat(frames, ignore_index=True)
     return dataset
+
+def question5_wandb(dataframe : pd.DataFrame):
+    """
+    For question 5 of task 4, submit a snippet of the final dataframe.
+
+    param:
+        dataframe (pd.DataFrame): Final dataframe
+    """
+    
+    #Filter to game id 2017021065
+    df = dataframe.loc[dataframe['game_id']==2017021065]
+
+    name = "Dataframe snippet"
+    tags = {"Task4_q5"}
+    #Code from the milestone 2 README
+    run = wandb.init(entity=WANDB_ENTITY,project=WANDB_PROJECT,name=name,tags=tags)
+
+    # create a wandb Artifact for each meaningful step
+    artifact = wandb.Artifact(
+        "wpg_v_wsh_2017021065",
+        type="dataset"
+    )
+
+    # add data
+    my_table = wandb.Table(dataframe=df)
+    artifact.add(my_table, "wpg_v_wsh_2017021065")
+    run.log_artifact(artifact)
+
+    # End run and ready for next run
+    run.finish()
+
+    return
+
+# if __name__ == "__main__":
+#     data = build_dataset_q4([2017])
+#     question5_wandb(data)
