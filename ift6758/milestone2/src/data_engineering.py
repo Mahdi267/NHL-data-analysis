@@ -340,7 +340,7 @@ def last_event(dataframe: pd.DataFrame):
     return df
 
 
-def build_dataset_q4(seasons: list[int], data_dir: Path = DATA_DIR, game_type: str = "02"):
+def build_dataset_q4(seasons: list[int], data_dir: Path = DATA_DIR, game_type: str = "02",only_shots: bool = True):
     """
     Apply the full pipeline to every regular season game of the given seasons.
 
@@ -358,19 +358,22 @@ def build_dataset_q4(seasons: list[int], data_dir: Path = DATA_DIR, game_type: s
         for path in tqdm(files, desc=str(season)):
             with open(path, encoding="utf-8") as f:
                 events = game_to_events(json.load(f))
-            # frames.append(filter_shots(events))
-            frames.append(events)
+            if only_shots:
+                frames.append(filter_shots(events))
+            else:
+                frames.append(events)
     # ignore_index = True allows to not repeat index for every season. 
     dataset = pd.concat(frames, ignore_index=True)
     return dataset
 
-def question5_wandb(dataframe : pd.DataFrame):
+def question5_wandb():
     """
     For question 5 of task 4, submit a snippet of the final dataframe.
 
     param:
         dataframe (pd.DataFrame): Final dataframe
     """
+    dataframe = build_dataset_q4([2017],only_shots=False)
     
     #Filter to game id 2017021065
     df = dataframe.loc[dataframe['game_id']==2017021065]
@@ -397,5 +400,4 @@ def question5_wandb(dataframe : pd.DataFrame):
     return
 
 # if __name__ == "__main__":
-#     data = build_dataset_q4([2017])
 #     question5_wandb(data)
