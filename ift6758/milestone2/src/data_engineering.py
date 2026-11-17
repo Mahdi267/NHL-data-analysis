@@ -16,6 +16,7 @@ GOAL_X = 89  # x coordinate of the goal line (feet)
 PERIOD_SECONDS = 20 * 60  # length of a regulation period (seconds)
 SHOT_EVENTS = ["shot-on-goal", "goal"]  # events asked in README
 PENALTY_TYPE = ["MIN","BEN","MAJ","MAT"]
+GOAL_RELEASE_PENALTY = ["MIN", "BEN"] # pénalités qui se terminent sur un but en avantage numérique
 FULL_TEAM = 5 # Taille équipe pleine
 MAX_BENCH = 2 # Retrait maximum de joueur
 
@@ -411,7 +412,7 @@ def numeric_advantage(dataframe: pd.DataFrame, penalty_types: list[str] = PENALT
     df = dataframe.copy()
     home_skaters, away_skaters, num_adv_sec = [], [], [] # données pour les nouvelles colonnes
     active_penalty = {"home": [],"away": []} # pénalité active
-    num_adv_start = 0 # Indicateur de l'heure de début de l'avantage numérique
+    num_adv_start = None # Indicateur de l'heure de début de l'avantage numérique
     for event in df.itertuples():
         t = event.game_seconds
 
@@ -433,7 +434,7 @@ def numeric_advantage(dataframe: pd.DataFrame, penalty_types: list[str] = PENALT
             duree = t - num_adv_start
         else:
             # Sinon on reset counter
-            num_adv_start = 0
+            num_adv_start = None
             duree = 0
         
         home_skaters.append(home)
@@ -442,12 +443,22 @@ def numeric_advantage(dataframe: pd.DataFrame, penalty_types: list[str] = PENALT
 
         # On détermine quelle équipe est home
         team = "home" if event.team_id == event.home_team_id else "away"
+        other_team = "away" if team == "home" else "home"
+
 
         # Ici on enregistre l'état des pénalités pour les évènements suivants
         if event.event_type == "penalty" and event.penalty_type in penalty_types:
             active_penalty[team].append({
-                "end": t + event.penalty_duration * 60
+                "end": t + event.penalty_duration * 60,
+                "goal_release": event.penalty_type in GOAL_RELEASE_PENALTY, # On enregistre si c'est un penalité avec release on goal
             })
+        # Avec certaines pénalité, un but de l'équipe adverse libère le joueur en pénalité
+        elif event.event_type == "goal":
+            scorer_skaters = home if team == "home" else away
+            opponent_skaters = away if team == "home" else home
+            minors = [p for p in active_penalty[other_team] if p["goal_release"]]
+            if scorer_skaters > opponent_skaters and minors:
+                active_penalty[other_team].remove(min(minors, key=lambda p: p["end"]))
 
     df["home_skaters"] = home_skaters
     df["away_skaters"] = away_skaters
@@ -456,30 +467,16 @@ def numeric_advantage(dataframe: pd.DataFrame, penalty_types: list[str] = PENALT
     return df
 
 
-        #if event.penalty_type in penalty_type:
-        #    team = "home" if event["team_id"] == event["home_team_id"] else "away"
-        #    penalty[team] = {"penalty": event["penalty_type"], "start": event["game_seconds"], "expiration":(event["penalty_duration"]* 60 + event["game_seconds"])}
-
-        # for penalty in both teams
-            # if penalty["team"]["expiration"] >= event["game_seconds"]
-                # retire la penalite du dictionnaire
-
-        # Si éléments non nul dans penalty
-            # list[0] = 5 - min(penalty["home"].count(), 2)
-            # list[1] = 5 - min(penalty["away"].count(), 2)
-
-        # Si list[0] et list[1] différents
-            # list[2] = min (penalty["team"]["expiration"] for team with max(penalty[team].count()))
 
 def compare_with_situation_code(shots: pd.DataFrame) -> tuple[float, pd.Series]:
     """
-    Percentage of shots where the computed skaters match situationCode, and the most frequent disagreements.
-    situationCode = away goalie, away skaters, home skaters, home goalie.
+    Percentage of shots where the computed skaters match situationCode.
     """
     shots = shots.dropna(subset=["situation_code"]).copy()
     code = shots["situation_code"].astype(str)
     shots["scorer_away"] = code.str[1].astype(int)
     shots["scorer_home"] = code.str[2].astype(int)
+    shots["empty_net"] = (code.str[0] == "0") | (code.str[3] == "0")
     agree = (shots["home_skaters"] == shots["scorer_home"]) & (shots["away_skaters"] == shots["scorer_away"])
     pct = 100 * agree.mean()
     return pct
