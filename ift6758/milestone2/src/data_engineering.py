@@ -15,7 +15,11 @@ from ift6758.milestone2.src.data_extraction import NHLyear, DATA_DIR, games_list
 GOAL_X = 89  # x coordinate of the goal line (feet)
 PERIOD_SECONDS = 20 * 60  # length of a regulation period (seconds)
 SHOT_EVENTS = ["shot-on-goal", "goal"]  # events asked in README
+PENALTY_TYPE = ["MIN","BEN","MAJ","MAT"]
+FULL_TEAM = 5 # Taille équipe pleine
+MAX_BENCH = 2 # Retrait maximum de joueur
 
+# Wandb
 WANDB_ENTITY = 'IFT6758A_2026_Team5'
 WANDB_PROJECT = 'IFT6758A_2026_05_milestone2'
 
@@ -147,6 +151,7 @@ def game_to_events(game: dict):
     df_data = (df_data.sort_values(by=["game_seconds", "sort_order"])).reset_index(
         drop=True
     )  # To help with Q4.2
+    df_data = numeric_advantage(df_data)
     df_data = last_event(df_data)
 
     return df_data
@@ -399,5 +404,95 @@ def question5_wandb():
 
     return
 
-# if __name__ == "__main__":
-#     question5_wandb(data)
+def numeric_advantage(dataframe: pd.DataFrame, penalty_types: list[str] = PENALTY_TYPE):
+    """
+    Adds number of skater on the ice for both teams and time since numerical advantage
+
+    :param df:
+    :return:
+    """
+    df = dataframe.copy()
+    home_skaters, away_skaters, num_adv_sec = [], [], [] # données pour les nouvelles colonnes
+    active_penalty = {"home": [],"away": []} # pénalité active
+    num_adv_start = 0 # Indicateur de l'heure de début de l'avantage numérique
+    for event in df.itertuples():
+        t = event.game_seconds
+
+        # on parcours les penalité active par team
+        for team in active_penalty:
+            # On garde juste les pénalité actives qui finisse après t
+            active_penalty[team] = [p for p in active_penalty[team] if p["end"] > t]
+
+        # Calcul du nombre de joeur sur la glace pour btoh teams
+        home = FULL_TEAM - min(len(active_penalty["home"]), MAX_BENCH)
+        away = FULL_TEAM - min(len(active_penalty["away"]), MAX_BENCH)
+        
+        # Si on a un nombre différent de joeur entre les deux équiês
+        if home != away:
+            # On check si l'avanatge numérqiue est déjà commencé
+            if num_adv_start is None:
+                num_adv_start = t
+            # Autrement on calcul la durée de puis le début
+            duree = t - num_adv_start
+        else:
+            # Sinon on reset counter
+            num_adv_start = 0
+            duree = 0
+        
+        home_skaters.append(home)
+        away_skaters.append(away)
+        num_adv_sec.append(duree)
+
+        # On détermine quelle équipe est home
+        team = "home" if event.team_id == event.home_team_id else "away"
+
+        # Ici on enregistre l'état des pénalités pour les évènements suivants
+        if event.event_type == "penalty" and event.penalty_type in penalty_types:
+            active_penalty[team].append({
+                "end": t + event.penalty_duration * 60
+            })
+
+    df["home_skaters"] = home_skaters
+    df["away_skaters"] = away_skaters
+    df["num_adv_seconds"] = num_adv_sec
+
+    return df
+
+
+        #if event.penalty_type in penalty_type:
+        #    team = "home" if event["team_id"] == event["home_team_id"] else "away"
+        #    penalty[team] = {"penalty": event["penalty_type"], "start": event["game_seconds"], "expiration":(event["penalty_duration"]* 60 + event["game_seconds"])}
+
+        # for penalty in both teams
+            # if penalty["team"]["expiration"] >= event["game_seconds"]
+                # retire la penalite du dictionnaire
+
+        # Si éléments non nul dans penalty
+            # list[0] = 5 - min(penalty["home"].count(), 2)
+            # list[1] = 5 - min(penalty["away"].count(), 2)
+
+        # Si list[0] et list[1] différents
+            # list[2] = min (penalty["team"]["expiration"] for team with max(penalty[team].count()))
+
+def compare_with_situation_code(shots: pd.DataFrame) -> tuple[float, pd.Series]:
+    """
+    Percentage of shots where the computed skaters match situationCode, and the most frequent disagreements.
+    situationCode = away goalie, away skaters, home skaters, home goalie.
+    """
+    shots = shots.dropna(subset=["situation_code"]).copy()
+    code = shots["situation_code"].astype(str)
+    shots["scorer_away"] = code.str[1].astype(int)
+    shots["scorer_home"] = code.str[2].astype(int)
+    agree = (shots["home_skaters"] == shots["scorer_home"]) & (shots["away_skaters"] == shots["scorer_away"])
+    pct = 100 * agree.mean()
+    return pct
+
+
+
+if __name__ == "__main__":
+    accord_percentage = []
+    for season in [2016, 2017, 2018, 2019, 2020, 2021, 2022]:
+        dataset = build_dataset_q4(seasons = [season])
+        accord_percentage.append({f"{season}": compare_with_situation_code(dataset)})
+    print(accord_percentage)
+
