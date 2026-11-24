@@ -17,8 +17,9 @@ PERIOD_SECONDS = 20 * 60  # length of a regulation period (seconds)
 SHOT_EVENTS = ["shot-on-goal", "goal"]  # events asked in README
 PENALTY_TYPE = ["MIN","BEN","MAJ","MAT"]
 GOAL_RELEASE_PENALTY = ["MIN", "BEN"] # pénalités qui se terminent sur un but en avantage numérique
-FULL_TEAM = 5 # Taille équipe pleine
-MAX_BENCH = 2 # Retrait maximum de joueur
+FULL_TEAM = 5 # Taille équipe pleine (skaters)
+MAX_BENCH = 2 # Retrait maximum de joueur (skaters)
+OVERTIME_FORMAT = 3  # nombre de skaters sur chaque équipe en 3v3 overtime
 
 # Wandb
 WANDB_ENTITY = 'IFT6758A_2026_Team5'
@@ -140,8 +141,15 @@ def game_to_events(game: dict):
         "situationCode": "situation_code",
         "details.typeCode": "penalty_type",
         "details.duration": "penalty_duration",
+        "details.goalieInNetId": "goalie_in_net",
     }
     df_data = (df_data.reindex(columns=new_columns.keys())).rename(columns=new_columns)
+
+    # adding whether the goal/shot was on an empty net
+    df_data["empty_net"] = (
+        df_data["goalie_in_net"].isna()
+    )
+    df_data = df_data.drop(columns=["goalie_in_net"])  # removing goalie id since its no longer needed
 
     df_data = fill_home_defending_side(df_data)
     df_data = add_game_seconds(df_data)
@@ -314,9 +322,15 @@ def last_event(dataframe: pd.DataFrame):
     df["distance_from_last"] = np.hypot(dx, dy)
 
     # Rebound
-    df["rebound"] = np.where(df["event_type"] == "shot-on-goal",
+    """df["rebound"] = np.where(df["event_type"] == "shot-on-goal",
                               np.where(df["last_event_type"]== "shot-on-goal", True, False), 
-                              False)
+                              False)"""
+    #df["rebound"] = np.where(df["event_type"] == "goal", np.where(df["last_event_type"] == "shot-on-goal", True, False),False)
+
+    df['rebound'] = False  # initiating the rebound column to False everywhere
+    # Changing rebound to true for shots and goals that follow a shot-on-goal:
+    df.loc[(df["event_type"] == "shot-on-goal") & (df["last_event_type"] == "shot-on-goal"), "rebound"] = True
+    df.loc[(df["event_type"] == "goal") & (df["last_event_type"] == "shot-on-goal"), "rebound"] = True
 
     # Change in shot angle
     df["change_angle"] = np.where(
@@ -421,16 +435,22 @@ def numeric_advantage(dataframe: pd.DataFrame, penalty_types: list[str] = PENALT
             # On garde juste les pénalité actives qui finisse après t
             active_penalty[team] = [p for p in active_penalty[team] if p["end"] > t]
 
-        # Calcul du nombre de joeur sur la glace pour btoh teams
-        home = FULL_TEAM - min(len(active_penalty["home"]), MAX_BENCH)
-        away = FULL_TEAM - min(len(active_penalty["away"]), MAX_BENCH)
+        # Calcul du nombre de joueur sur la glace pour both teams
+        if event.game_type == 2 and event.period_type == "OT" :
+            # in 3 v 3 overtime
+            home = OVERTIME_FORMAT + min(len(active_penalty["away"]) - len(active_penalty["home"]), 1)
+            away = OVERTIME_FORMAT + min(len(active_penalty["home"]) - len(active_penalty["away"]), 1)
+        else:
+            home = FULL_TEAM - min(len(active_penalty["home"]), MAX_BENCH)
+            away = FULL_TEAM - min(len(active_penalty["away"]), MAX_BENCH)
+        # 9388
         
         # Si on a un nombre différent de joeur entre les deux équiês
         if home != away:
             # On check si l'avanatge numérqiue est déjà commencé
             if num_adv_start is None:
                 num_adv_start = t
-            # Autrement on calcul la durée de puis le début
+            # Autrement on calcule la durée depuis le début
             duree = t - num_adv_start
         else:
             # Sinon on reset counter
@@ -460,6 +480,7 @@ def numeric_advantage(dataframe: pd.DataFrame, penalty_types: list[str] = PENALT
             if scorer_skaters > opponent_skaters and minors:
                 active_penalty[other_team].remove(min(minors, key=lambda p: p["end"]))
 
+
     df["home_skaters"] = home_skaters
     df["away_skaters"] = away_skaters
     df["num_adv_seconds"] = num_adv_sec
@@ -476,7 +497,7 @@ def compare_with_situation_code(shots: pd.DataFrame) -> tuple[float, pd.Series]:
     code = shots["situation_code"].astype(str)
     shots["scorer_away"] = code.str[1].astype(int)
     shots["scorer_home"] = code.str[2].astype(int)
-    shots["empty_net"] = (code.str[0] == "0") | (code.str[3] == "0")
+    shots["goalie_out"] = (code.str[0] == "0") | (code.str[3] == "0")
     agree = (shots["home_skaters"] == shots["scorer_home"]) & (shots["away_skaters"] == shots["scorer_away"])
     pct = 100 * agree.mean()
     return pct
@@ -487,6 +508,13 @@ if __name__ == "__main__":
     accord_percentage = []
     for season in [2016, 2017, 2018, 2019, 2020, 2021, 2022]:
         dataset = build_dataset_q4(seasons = [season])
+        # dataset.to_pickle(f"q4_{season}.pkl")
         accord_percentage.append({f"{season}": compare_with_situation_code(dataset)})
     print(accord_percentage)
 
+"""Notes:
+found error with skater numbers in 3v3 overtime -- home_skaters and away_skaters are 5 instead of 3
+CORRECTED
+
+Additional inconsistencies following penalties: coincidental penalties mean sometimes play continues at 5v5 instead of 4v4?
+"""
