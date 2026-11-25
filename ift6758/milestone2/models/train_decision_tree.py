@@ -155,13 +155,22 @@ def evaluate(model, X_val, y_val) -> dict:
 
 if __name__ == "__main__":
     X_train, X_val, y_train, y_val = load_data()
-    print(X_train.shape, X_val.shape, y_train.mean())
-    model = build_pipeline().fit(X_train, y_train) # modèle decision tree de base
-    print(roc_auc_score(y_val, model.predict_proba(X_val)[:, 1]))
+
+    #No tuning, base decisiontree model
+    default = build_pipeline().fit(X_train, y_train)
+    print("No tuning     ", evaluate(default, X_val, y_val))
+
+    #Hand-picked depth
+    depth6 = build_pipeline(max_depth=6).fit(X_train, y_train)
+    print("max_depth=6   ", evaluate(depth6, X_val, y_val))
+
+    #GridSearch
     search = tune_tree(X_train, y_train)
-    print(search.best_params_, -search.best_score_)
-    results = pd.DataFrame(search.cv_results_)
+    print("Best params   ", search.best_params_, "| CV log loss", -search.best_score_)
+    tuned = search.best_estimator_
+    print("GridSearch    ", evaluate(tuned, X_val, y_val))
     model = search.best_estimator_
-    text, fig = tree_observation(model=model, max_depth=3)
-    print(text)
+    #Printout results in graphics
+    text, fig = tree_observation(model=model, max_depth=4)
+    #print(text)
     fig.savefig(FIGURE_DIR / "DT_tree_top.png", dpi=150, bbox_inches="tight")
