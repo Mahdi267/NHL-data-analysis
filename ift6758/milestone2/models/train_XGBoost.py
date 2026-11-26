@@ -13,23 +13,23 @@ def question1(df):
     #same dataset using only distance and angle features
     X_train, X_val, y_train, y_val = split_data_train(df, ['distance','angle'], seed=SEED, validation_size=VALIDATION_SIZE)
 
-    # name = "XGBoost distance + angle"
-    # config = {
-    #     "model": "XGBoost",
-    #     "training_size": len(X_train),
-    #     "validation_ratio": VALIDATION_SIZE,
-    #     "features": ["distance", "angle"],
-    #     "seasons": TRAIN_SEASONS,
-    #     "game_type": "02",  # regular season
-    #     "seed": SEED,
-    #     "dataset": "build_dataset_q4",
-    # }
-    # # Set up tags for specific run
-    # tags = ["Question5.1", "XGBoost", "distance&angle_combination"]
-    # # run wandb for that run
-    # run = wandb.init(
-    #     entity=WANDB_ENTITY, project=WANDB_PROJECT, name=name, tags=tags, config=config
-    # )
+    name = "XGBoost distance + angle"
+    config = {
+        "model": "XGBoost",
+        "training_size": len(X_train),
+        "validation_ratio": VALIDATION_SIZE,
+        "features": ["distance", "angle"],
+        "seasons": TRAIN_SEASONS,
+        "game_type": "02",  # regular season
+        "seed": SEED,
+        "dataset": "build_dataset_q4",
+    }
+    # Set up tags for specific run
+    tags = ["Question5.1", "XGBoost", "distance&angle_combination"]
+    # run wandb for that run
+    run = wandb.init(
+        entity=WANDB_ENTITY, project=WANDB_PROJECT, name=name, tags=tags, config=config
+    )
 
     # Train
     clf = xgb.XGBClassifier()
@@ -39,13 +39,13 @@ def question1(df):
     probas = {}
     probas['XGBoost baseline'] = clf.predict_proba(X_val)[:, -1]
 
-    # # Save the model on disk, then upload it as a wandb artifact
-    # MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    # model_path = MODEL_DIR / f"{name.replace(' ', '_').replace('+', 'plus')}.joblib"
-    # joblib.dump(clf, model_path)
-    # run.log_artifact(model_path, name=model_path.stem, type="model")
-    # # End run and ready for next run
-    # run.finish()
+    # Save the model on disk, then upload it as a wandb artifact
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    model_path = MODEL_DIR / f"{name.replace(' ', '_').replace('+', 'plus')}.joblib"
+    joblib.dump(clf, model_path)
+    run.log_artifact(model_path, name=model_path.stem, type="model")
+    # End run and ready for next run
+    run.finish()
 
     
     roc = roc_plot(y_val,probas)
@@ -72,23 +72,23 @@ def question2(df,roc,goal,cumulative,calibration):
     X_val['last_event_type'] = X_val['last_event_type'].astype('category')
 
     
-    # name = "XGBoost hyperparameter tuning"
-    # config = {
-    #     "model": "XGBoost",
-    #     "training_size": len(X_train),
-    #     "validation_ratio": VALIDATION_SIZE,
-    #     "features": features,
-    #     "seasons": TRAIN_SEASONS,
-    #     "game_type": "02",  # regular season
-    #     "seed": SEED,
-    #     "dataset": "build_dataset_q4",
-    # }
-    # # Set up tags for specific run
-    # tags = ["Question5.2", "XGBoost", "hyperparameter_tuning", "all_features"]
-    # # run wandb for that run
-    # run = wandb.init(
-    #     entity=WANDB_ENTITY, project=WANDB_PROJECT, name=name, tags=tags, config=config
-    # )
+    name = "XGBoost hyperparameter tuning"
+    config = {
+        "model": "XGBoost",
+        "training_size": len(X_train),
+        "validation_ratio": VALIDATION_SIZE,
+        "features": features,
+        "seasons": TRAIN_SEASONS,
+        "game_type": "02",  # regular season
+        "seed": SEED,
+        "dataset": "build_dataset_q4",
+    }
+    # Set up tags for specific run
+    tags = ["Question5.2", "XGBoost", "hyperparameter_tuning", "all_features"]
+    # run wandb for that run
+    run = wandb.init(
+        entity=WANDB_ENTITY, project=WANDB_PROJECT, name=name, tags=tags, config=config
+    )
 
     # Train
     clf = xgb.XGBClassifier(enable_categorical = True,random_state=SEED, learning_rate = 0.1, max_depth = 7, subsample=1.0)
@@ -98,13 +98,13 @@ def question2(df,roc,goal,cumulative,calibration):
     probas = {}
     probas['XGBoost hyperparameter tuning'] = clf.predict_proba(X_val)[:, -1]
 
-    # # Save the model on disk, then upload it as a wandb artifact
-    # MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    # model_path = MODEL_DIR / f"{name.replace(' ', '_').replace('+', 'plus')}.joblib"
-    # joblib.dump(clf, model_path)
-    # run.log_artifact(model_path, name=model_path.stem, type="model")
-    # # End run and ready for next run
-    # run.finish()
+    # Save the model on disk, then upload it as a wandb artifact
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    model_path = MODEL_DIR / f"{name.replace(' ', '_').replace('+', 'plus')}.joblib"
+    joblib.dump(clf, model_path)
+    run.log_artifact(model_path, name=model_path.stem, type="model")
+    # End run and ready for next run
+    run.finish()
 
     roc = roc_plot(y_val,probas,roc)
 
@@ -186,9 +186,10 @@ def question3(df,roc,goal,cumulative,calibration):
     X_train, X_val = encoding(X_train,X_val)
 
     # Feature selection
-    selection = ['game_seconds', 'period', 'distance', 'angle', 'time_from_last',
-        'rebound', 'speed', 'backhand', 'deflected', 'slap', 'snap',
-        'wrap-around', 'wrist', 'faceoff', 'giveaway', 'hit', 'shot-on-goal']
+    selection = ['game_seconds', 'period', 'y_coord', 'distance', 'angle',
+       'time_from_last', 'distance_from_last', 'rebound', 'speed', 'backhand',
+       'bat', 'deflected', 'slap', 'snap', 'tip-in', 'wrap-around', 'wrist',
+       'faceoff', 'giveaway', 'hit', 'missed-shot']
     X_train = X_train[selection]
     X_val = X_val[selection]
 
