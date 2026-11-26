@@ -23,6 +23,7 @@ from ift6758.milestone2.models.train_baselines import (
     SEED, VALIDATION_SIZE, WANDB_ENTITY, WANDB_PROJECT, MODEL_DIR, FIGURE_DIR,
 )
 from ift6758.milestone2.models.plot import all_plot
+from ift6758.milestone2.src.data_wandb import evaluate, data_config
 
 # CONSTANTES
 NUMERIC_FEATURES = [
@@ -138,19 +139,6 @@ def tree_observation(model: Pipeline, max_depth: int = 3):
         ax=ax,
     )
     return text, fig
-
-def evaluate(model, X_val, y_val) -> dict:
-    """
-    Validation scores of a fitted pipeline.
-
-    return:
-        dict : AUC (ranking of shots, higher is better) and log loss (quality of probabilities, lower is better)
-    """
-    proba = model.predict_proba(X_val)[:, 1]
-    return {
-        "val_auc": roc_auc_score(y_val, proba),
-        "val_log_loss": log_loss(y_val, proba),
-    }
 
 
 if __name__ == "__main__":
